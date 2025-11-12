@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Absensi Karyawan</title>
+  <!-- 
+    CSS dari kode asli Anda. 
+    Saya hanya akan menyalin sebagian kecil untuk menjaga agar file tidak terlalu besar.
+    Gunakan CSS lengkap dari file asli Anda di sini.
+  -->
+  <style>
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f4f7f6;margin:0;padding:0}.container{max-width:1400px;margin:0 auto;padding:20px}.login-container{display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}.login-box{background:white;border-radius:20px;padding:40px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:450px;width:100%}.login-header h1{color:#667eea;margin:0 0 10px 0;font-size:28px;text-align:center}.form-group{margin-bottom:20px}.form-group label{display:block;margin-bottom:8px;color:#333;font-weight:500}.form-group input{width:100%;padding:12px 15px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;box-sizing:border-box}.btn-primary{width:100%;padding:14px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer}.btn-primary:disabled{opacity:0.6;cursor:not-allowed}.dashboard{display:none}.dashboard.active{display:block}.dashboard-header{background:white;border-radius:15px;padding:25px;margin-bottom:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:center}.user-info{display:flex;align-items:center;gap:15px}.user-avatar{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;color:white;font-weight:600}.btn-logout{padding:10px 20px;background:#ff4757;color:white;border:none;border-radius:8px;cursor:pointer}.tabs{display:flex;gap:10px;margin-bottom:25px;flex-wrap:wrap}.tab-btn{padding:12px 24px;background:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;color:#666}.tab-btn.active{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white}.loading{text-align:center;padding:40px;font-size:18px}.empty-state{text-align:center;padding:60px 20px;color:#666}.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-bottom:25px}.stat-card{background:white;border-radius:15px;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.stat-card.blue{border-left:5px solid #3498db}.stat-card.green{border-left:5px solid #2ecc71}.stat-card.yellow{border-left:5px solid #f39c12}.stat-card h3{margin:0 0 10px 0;color:#666;font-size:14px}.stat-card .value{font-size:32px;font-weight:700;color:#333}.clock-card{background:white;border-radius:15px;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.clock-card.disabled{opacity:0.5;pointer-events:none}.clock-card.in{border-left:5px solid #2ecc71}.clock-card.out{border-left:5px solid #e74c3c}.clock-card h3{margin:0 0 20px 0;color:#333;font-size:20px}.note-section textarea{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-family:inherit;resize:vertical;min-height:80px;box-sizing:border-box}.btn-clock{width:100%;padding:16px;background:linear-gradient(135deg,#2ecc71 0%,#27ae60 100%);color:white;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer}.btn-clock:disabled{background:#95a5a6;cursor:not-allowed}.btn-clock.out{background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%)}.current-time{font-size:24px;font-weight:700;color:#667eea}.current-date{font-size:14px;color:#666}.jobdesk-container{background:white;border-radius:15px;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.jobdesk-header{text-align:center;margin-bottom:30px;padding-bottom:20px;border-bottom:3px solid #f0f0f0}.jobdesk-section h3{margin:0 0 20px 0;color:#667eea;font-size:24px}.task-list{display:grid;gap:15px}.task-item{background:#f8f9fa;border-left:4px solid #667eea;border-radius:10px;padding:20px;cursor:pointer}.task-item.completed{background:#d4edda;border-left-color:#2ecc71}.task-header{display:flex;align-items:start;gap:15px;margin-bottom:10px}.task-checkbox{width:24px;height:24px;min-width:24px;border:3px solid #667eea;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:white}.task-checkbox.checked{background:#2ecc71;border-color:#2ecc71}.task-checkbox.checked::after{content:'✓';color:white;font-weight:700}.task-title{flex:1;font-weight:700;color:#333;font-size:18px}.task-description{margin-left:39px;color:#666;font-size:14px}.progress-section{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:15px;padding:25px;color:white;margin-bottom:30px}.progress-bar-container{background:rgba(255,255,255,0.2);border-radius:10px;height:30px;overflow:hidden;margin-bottom:10px}.progress-bar{background:white;height:100%;border-radius:10px;transition:width 0.5s ease;display:flex;align-items:center;justify-content:center;font-weight:700;color:#667eea}.progress-text{text-align:center;font-size:16px}.attendance-card{background:white;border-radius:15px;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.attendance-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:25px;padding-bottom:20px;border-bottom:3px solid #f0f0f0}.status-badge{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600}.status-badge.on-time{background:#d4edda;color:#155724}.status-badge.late{background:#fff3cd;color:#856404}.attendance-details{display:grid;grid-template-columns:1fr 1fr;gap:25px}.clock-section{padding:20px;background:#f8f9fa;border-radius:12px}.clock-info{margin-bottom:15px;padding:10px;background:white;border-radius:8px}
+    /* Salin semua style dari file asli Anda ke sini */
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="loading">Memuat aplikasi...</div>
+  </div>
+
+  <script>
+    // Ganti dengan URL Web App Anda dari Google Apps Script
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby-gPFw3ycBdOaNieEjj49Iw_fNN4c2jIQIlDd6NTKSf33DRuyejCCWrU1QRtORxR6-vA/exec';
+
+    // Data default dari aplikasi asli
+    const defaultConfig = {
+      app_title: 'Sistem Absensi Karyawan',
+      cafe_name: 'Cafe Payboss',
+      cafe_address: 'Jl. Tanjung Permai No 2 RT 07 Pembataan. Murung Pudak. Tabalong',
+      cafe_phone: '0811-5194-456',
+      cafe_logo: 'https://i.imgur.com/RddRCWi.png'
+    };
+    // JobDeskData akan dimuat dari server
+    let jobDeskData = {}; 
+
+    // Variabel state aplikasi
+    let allData = { rosters: [], jobdesks: [], checklists: [], attendance: [] };
+    let currentUser = null;
+    let currentView = 'login';
+    let currentTab = 'overview';
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    let shiftSettings = {
+      pagi: { start: '08:00', end: '16:00' },
+      siang: { start: '16:00', end: '00:00' },
+      malam: { start: '00:00', end: '08:00' }
+    };
+
+    // --- Fungsi Helper API ---
+    async function fetchFromGAS(action, payload = {}) {
+      try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8',
+          },
+          body: JSON.stringify({ action, ...payload }),
+          mode: 'cors'
+        });
+        const result = await response.json();
+        if (result.status === 'error') {
+          throw new Error(result.message);
+        }
+        return result;
+      } catch (error) {
+        console.error('Error fetching from GAS:', error);
+        showMessage(`Error: ${error.message}`);
+        return { status: 'error', message: error.message };
+      }
+    }
+
+    // --- Logika Aplikasi ---
+
+    function init() {
+      render();
+    }
+
+    function render() {
+      const app = document.getElementById('app');
+      const config = defaultConfig; 
+      
+      if (currentView === 'login') {
+        app.innerHTML = renderLogin(config);
+        attachLoginListeners();
+      } else if (currentView === 'employee') {
+        app.innerHTML = renderEmployeeDashboard(config);
+        attachEmployeeListeners();
+      }
+    }
+
+    function renderLogin(config) {
+      return `
+        <div class="login-container">
+          <div class="login-box">
+            <div class="login-header">
+              ${config.cafe_logo ? `<img src="${config.cafe_logo}" alt="Logo" style="width: 80px; height: 80px; object-fit: contain; margin: 0 auto 15px; display: block;">` : ''}
+              <h1>${config.app_title}</h1>
+              <p>Portal Karyawan</p>
+            </div>
+            <form id="loginForm">
+              <div class="form-group">
+                <label for="userId">Employee ID</label>
+                <input type="text" id="userId" placeholder="Masukkan Employee ID" required>
+              </div>
+              <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Masukkan password" required>
+              </div>
+              <button type="submit" class="btn-primary">Login</button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    function attachLoginListeners() {
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userId = document.getElementById('userId').value;
+        const password = document.getElementById('password').value;
+        const btn = e.target.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = 'Memverifikasi...';
+
+        const result = await fetchFromGAS('employeeLogin', { userId, password });
+
+        if (result.status === 'success') {
+          // Server mengembalikan semua data yang diperlukan
+          currentUser = result.data.user;
+          allData.rosters = result.data.rosters || [];
+          allData.jobdesks = result.data.jobdesks || [];
+          allData.checklists = result.data.checklists || [];
+          allData.attendance = result.data.attendance || [];
+          
+          // Proses jobdesks menjadi lookup
+          jobDeskData = {};
+          allData.jobdesks.forEach(custom => {
+             if (custom.position && custom.tasks_json) {
+                jobDeskData[custom.position] = {
+                  icon: custom.icon || '📋',
+                  title: custom.title || custom.position,
+                  objective: custom.objective || '',
+                  tasks: JSON.parse(custom.tasks_json),
+                  id: custom.id
+                };
+              }
+          });
+
+          currentView = 'employee';
+          currentTab = 'overview';
+          render(); 
+        } else {
+          showMessage(result.message || 'Employee ID atau password salah!');
+          btn.disabled = false;
+          btn.textContent = 'Login';
+        }
+      });
+    }
+
+    // --- Render Dashboard Karyawan ---
+    
+    function renderEmployeeDashboard(config) {
+      const today = new Date().toISOString().split('T')[0];
+      const todayAttendance = allData.attendance.find(d => d.date === today);
+      
+      const thisMonth = allData.attendance.filter(d => {
+        const attDate = new Date(d.date);
+        return attDate.getMonth() === new Date().getMonth() && attDate.getFullYear() === new Date().getFullYear();
+      });
+      
+      const totalHours = thisMonth.reduce((sum, att) => sum + (parseFloat(att.total_hours) || 0), 0);
+      const lateCount = thisMonth.filter(att => att.status === 'Terlambat').length;
+      
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const myRosters = allData.rosters;
+      
+      let statusText = 'Belum Absen';
+      let statusColor = '#95a5a6';
+      if (todayAttendance) {
+        if (todayAttendance.clock_out_time) {
+          statusText = 'Sudah Pulang';
+          statusColor = '#e74c3c';
+        } else {
+          statusText = 'Sedang Bekerja';
+          statusColor = '#2ecc71';
+        }
+      }
+      
+      const hasClockIn = todayAttendance && todayAttendance.clock_in_time;
+      const hasClockOut = todayAttendance && todayAttendance.clock_out_time;
+      
+      return `
+        <div class="container">
+          <div class="dashboard active">
+            <div class="dashboard-header">
+              <div class="dashboard-title">
+                 <h1>${config.app_title}</h1>
+                 <p>${config.cafe_name}</p>
+              </div>
+              <div class="user-info">
+                ${currentUser.photo ? `
+                  <img src="${currentUser.photo}" alt="${currentUser.name}" class="user-avatar" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" onerror="this.outerHTML='<div class=\\'user-avatar\\'>${currentUser.name.charAt(0)}</div>'">
+                ` : `
+                  <div class="user-avatar">${currentUser.name.charAt(0)}</div>
+                `}
+                <div class="user-details">
+                  <h3>${currentUser.name}</h3>
+                  <p>${currentUser.position} • ${currentUser.id}</p>
+                </div>
+                <div style="text-align: right; margin: 0 10px;">
+                  <div class="current-time" id="currentTime">00:00:00</div>
+                  <div class="current-date" id="currentDate">-</div>
+                </div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+              </div>
+            </div>
+            
+            <div class="tabs">
+              <button class="tab-btn ${currentTab === 'overview' ? 'active' : ''}" onclick="switchTab('overview')">📊 Dashboard</button>
+              <button class="tab-btn ${currentTab === 'jobdesk' ? 'active' : ''}" onclick="switchTab('jobdesk')">📝 Job Desk Saya</button>
+            </div>
+            
+            ${currentTab === 'overview' ? renderEmployeeOverview(statusText, statusColor, totalHours, lateCount, thisMonth, days, myRosters, hasClockIn, hasClockOut) : renderEmployeeJobDesk()}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderEmployeeOverview(statusText, statusColor, totalHours, lateCount, thisMonth, days, myRosters, hasClockIn, hasClockOut) {
+      // Salin dari renderEmployeeOverview di kode asli
+      return `
+        <div class="stats-grid">
+          <div class="stat-card" style="border-left: 5px solid ${statusColor};">
+            <h3>Status Hari Ini</h3><p class="value" style="font-size: 20px;">${statusText}</p>
+          </div>
+          <div class="stat-card blue">
+            <h3>Total Jam Kerja</h3><p class="value">${totalHours.toFixed(1)} jam</p>
+          </div>
+          <div class="stat-card yellow">
+            <h3>Keterlambatan</h3><p class="value">${lateCount} kali</p>
+          </div>
+          <div class="stat-card green">
+            <h3>Kehadiran Bulan Ini</h3><p class="value">${thisMonth.length} hari</p>
+          </div>
+        </div>
+        
+        <div style="background: white; border-radius: 15px; padding: 25px; margin-bottom: 25px;">
+          <h2>Jadwal Kerja Minggu Ini</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+            ${days.map(day => {
+              const roster = myRosters.find(r => r.day === day);
+              const shift = roster?.shift || 'Off';
+              let shiftIcon = '🏖️'; let shiftColor = '#95a5a6'; let shiftTime = 'Libur';
+              if (shift === 'Pagi') { shiftIcon = '🌅'; shiftColor = '#f39c12'; shiftTime = `${shiftSettings.pagi.start} - ${shiftSettings.pagi.end}`; }
+              else if (shift === 'Siang') { shiftIcon = '☀️'; shiftColor = '#e67e22'; shiftTime = `${shiftSettings.siang.start} - ${shiftSettings.siang.end}`; }
+              else if (shift === 'Malam') { shiftIcon = '🌙'; shiftColor = '#3498db'; shiftTime = `${shiftSettings.malam.start} - ${shiftSettings.malam.end}`; }
+              const isToday = days[new Date().getDay()] === day;
+              return `
+                <div style="background: ${isToday ? '#f0f4ff' : '#f8f9fa'}; border: 2px solid ${isToday ? shiftColor : '#e0e0e0'}; border-radius: 12px; padding: 15px; text-align: center;">
+                  <div style="font-size: 32px; margin-bottom: 8px;">${shiftIcon}</div>
+                  <div style="font-weight: 700;">${day}</div>
+                  <div style="font-weight: 600; color: ${shiftColor};">${shift}</div>
+                  <div style="font-size: 11px; color: #666;">${shiftTime}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 25px;">
+          <div class="clock-card in ${hasClockIn ? 'disabled' : ''}">
+            <h3>✅ CLOCK IN</h3>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 32px; font-weight: 700; color: #667eea;" id="clockInTime">--:--:--</div>
+                <div style="font-size: 14px; color: #666;" id="clockInDate">-</div>
+            </div>
+            <div class="note-section">
+              <h4>📝 Catatan (Opsional)</h4>
+              <textarea id="noteIn" class="form-group" placeholder="Contoh: Masuk shift pagi"></textarea>
+            </div>
+            <button type="button" class="btn-clock" id="clockInBtn" onclick="clockIn()" ${hasClockIn ? 'disabled' : ''}>
+              ✅ CLOCK IN SEKARANG
+            </button>
+            ${hasClockIn ? '<div style="text-align: center; margin-top: 15px; color: #2ecc71; font-weight: 600;">✓ Anda sudah clock in</div>' : ''}
+          </div>
+          
+          <div class="clock-card out ${!hasClockIn || hasClockOut ? 'disabled' : ''}">
+            <h3>⛔ CLOCK OUT</h3>
+             <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 32px; font-weight: 700; color: #e74c3c;" id="clockOutTime">--:--:--</div>
+                <div style="font-size: 14px; color: #666;" id="clockOutDate">-</div>
+            </div>
+            <div class="note-section">
+              <h4>📝 Catatan (Opsional)</h4>
+              <textarea id="noteOut" class="form-group" placeholder="Contoh: Selesai shift"></textarea>
+            </div>
+            <button type="button" class="btn-clock out" id="clockOutBtn" onclick="clockOut()" ${!hasClockIn || hasClockOut ? 'disabled' : ''}>
+              ⛔ CLOCK OUT SEKARANG
+            </button>
+            ${hasClockOut ? '<div style="text-align: center; margin-top: 15px; color: #e74c3c; font-weight: 600;">✓ Anda sudah clock out</div>' : ''}
+          </div>
+        </div>
+        
+        ${renderEmployeeHistory()}
+      `;
+    }
+
+    function renderEmployeeJobDesk() {
+      // Salin dari renderEmployeeJobDesk di kode asli
+      const position = currentUser.position;
+      const jobdesk = jobDeskData[position];
+      
+      if (!jobdesk) {
+        return `<div class="empty-state"><h3>Job Desk Tidak Tersedia</h3><p>Job desk untuk posisi ${position} belum tersedia.</p></div>`;
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      const todayChecklist = allData.checklists.find(d => d.date === today);
+      const completedTasks = todayChecklist ? JSON.parse(todayChecklist.completed_tasks_json || '[]') : [];
+      const totalTasks = jobdesk.tasks.length;
+      const completedCount = completedTasks.length;
+      const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+      
+      return `
+        <div class="jobdesk-container">
+          <div class="jobdesk-header">
+            <h2>${jobdesk.icon} ${jobdesk.title}</h2>
+            <p>${jobdesk.objective}</p>
+          </div>
+          
+          <div class="progress-section">
+            <h3>📊 Progress Hari Ini</h3>
+            <div class="progress-bar-container">
+              <div class="progress-bar" style="width: ${progressPercent}%;">${progressPercent > 0 ? `${progressPercent}%` : ''}</div>
+            </div>
+            <div class="progress-text">${completedCount} dari ${totalTasks} tugas selesai</div>
+          </div>
+          
+          <div class="jobdesk-section">
+            <h3>✅ Daftar Tugas & Tanggung Jawab</h3>
+            <div class="task-list">
+              ${jobdesk.tasks.map((task, idx) => {
+                const isCompleted = completedTasks.includes(idx);
+                return `
+                  <div class="task-item ${isCompleted ? 'completed' : ''}" onclick="toggleTask(${idx})">
+                    <div class="task-header">
+                      <div class="task-checkbox ${isCompleted ? 'checked' : ''}"></div>
+                      <div class="task-title">${idx + 1}. ${task.title}</div>
+                    </div>
+                    <div class="task-description">${task.description}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderEmployeeHistory() {
+      // Salin dari renderEmployeeHistory di kode asli
+      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const attendances = allData.attendance.filter(d => {
+        const attDate = new Date(d.date);
+        return attDate.getMonth() === currentMonth && attDate.getFullYear() === currentYear;
+      }).sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      return `
+        <div style="background: white; border-radius: 15px; padding: 30px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #333;">Riwayat Absensi</h2>
+            <select id="monthFilterEmp" onchange="changeMonth(this.value)">
+              ${months.map((month, idx) => `
+                <option value="${idx}" ${idx === currentMonth ? 'selected' : ''}>${month} ${currentYear}</option>
+              `).join('')}
+            </select>
+          </div>
+          
+          ${attendances.length > 0 ? `
+            <div class="attendance-grid">
+              ${attendances.map(att => `
+                <div class="attendance-card">
+                  <div class="attendance-header">
+                    <div><h3>${new Date(att.date).toLocaleDateString('id-ID')}</h3></div>
+                    <div>
+                      <span class="status-badge ${att.status === 'Tepat Waktu' ? 'on-time' : 'late'}">${att.status}</span>
+                      <p>Total: ${att.total_hours} jam</p>
+                    </div>
+                  </div>
+                  <div class="attendance-details">
+                     <div class="clock-section">
+                      <h4>✅ Clock In</h4>
+                      <div class="clock-info"><strong>Waktu:</strong> <span>${att.clock_in_time}</span></div>
+                      ${att.clock_in_note ? `<div class="clock-info"><strong>Catatan:</strong> <span>${att.clock_in_note}</span></div>` : ''}
+                    </div>
+                    <div class="clock-section">
+                      <h4>⛔ Clock Out</h4>
+                      ${att.clock_out_time ? `
+                        <div class="clock-info"><strong>Waktu:</strong> <span>${att.clock_out_time}</span></div>
+                        ${att.clock_out_note ? `<div class="clock-info"><strong>Catatan:</strong> <span>${att.clock_out_note}</span></div>` : ''}
+                      ` : '<p>Belum clock out</p>'}
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : '<div class="empty-state"><h3>Belum Ada Riwayat</h3></div>'}
+        </div>
+      `;
+    }
+    
+    // --- Event Listeners & Handler ---
+
+    function attachEmployeeListeners() {
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('id-ID');
+      const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      
+      const timeEl = document.getElementById('currentTime');
+      const dateEl = document.getElementById('currentDate');
+      const clockInTimeEl = document.getElementById('clockInTime');
+      const clockInDateEl = document.getElementById('clockInDate');
+      const clockOutTimeEl = document.getElementById('clockOutTime');
+      const clockOutDateEl = document.getElementById('clockOutDate');
+      
+      if (timeEl) timeEl.textContent = timeStr;
+      if (dateEl) dateEl.textContent = dateStr;
+      if (clockInTimeEl) clockInTimeEl.textContent = timeStr;
+      if (clockInDateEl) clockInDateEl.textContent = dateStr;
+      if (clockOutTimeEl) clockOutTimeEl.textContent = timeStr;
+      if (clockOutDateEl) clockOutDateEl.textContent = dateStr;
+    }
+
+    // --- Fungsi Global (dipanggil dari HTML) ---
+
+    window.switchTab = (tab) => {
+      currentTab = tab;
+      render();
+    };
+
+    window.logout = () => {
+      currentUser = null;
+      currentView = 'login';
+      currentTab = 'overview';
+      allData = { rosters: [], jobdesks: [], checklists: [], attendance: [] };
+      jobDeskData = {};
+      render();
+    };
+
+    window.changeMonth = (month) => {
+      currentMonth = parseInt(month);
+      render();
+    };
+
+    window.toggleTask = async (taskIndex) => {
+      const today = new Date().toISOString().split('T')[0];
+      let todayChecklist = allData.checklists.find(d => d.date === today);
+      
+      let completedTasks = todayChecklist ? JSON.parse(todayChecklist.completed_tasks_json || '[]') : [];
+      
+      if (completedTasks.includes(taskIndex)) {
+        completedTasks = completedTasks.filter(t => t !== taskIndex);
+      } else {
+        completedTasks.push(taskIndex);
+      }
+      
+      const data = {
+        id: todayChecklist?.id || null,
+        employee_id: currentUser.id,
+        date: today,
+        completed_tasks_json: JSON.stringify(completedTasks)
+      };
+
+      const result = await fetchFromGAS('updateChecklist', { data });
+      
+      if (result.status === 'success') {
+        // Update data lokal
+        if (todayChecklist) {
+          todayChecklist.completed_tasks_json = data.completed_tasks_json;
+        } else {
+          allData.checklists.push(result.data);
+        }
+        render(); // Render ulang untuk update UI
+      } else {
+        showMessage('Gagal menyimpan progress.');
+      }
+    };
+
+    window.clockIn = async () => {
+      const note = document.getElementById('noteIn').value;
+      const btn = document.getElementById('clockInBtn');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+      
+      const now = new Date();
+      const time = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const date = now.toISOString().split('T')[0];
+      
+      // Logika status terlambat (contoh: 08:00)
+      const shiftStart = new Date();
+      shiftStart.setHours(8, 0, 0, 0); 
+      const status = now > shiftStart ? 'Terlambat' : 'Tepat Waktu';
+      
+      const data = {
+        employee_id: currentUser.id,
+        date: date,
+        clock_in_time: time,
+        clock_in_note: note,
+        clock_out_time: '',
+        clock_out_note: '',
+        status: status,
+        total_hours: 0
+      };
+
+      const result = await fetchFromGAS('clockIn', { data });
+      
+      if (result.status === 'success') {
+        showMessage('✅ Clock in berhasil disimpan!');
+        allData.attendance.push(result.data); // Tambah data baru ke state
+        render(); // Render ulang
+      } else {
+        showMessage('Gagal clock in.');
+        btn.disabled = false;
+        btn.textContent = '✅ CLOCK IN SEKARANG';
+      }
+    };
+
+    window.clockOut = async () => {
+      const note = document.getElementById('noteOut').value;
+      const btn = document.getElementById('clockOutBtn');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+      
+      const today = new Date().toISOString().split('T')[0];
+      const attendance = allData.attendance.find(d => d.date === today && !d.clock_out_time);
+      
+      if (!attendance) {
+        showMessage('Data clock in tidak ditemukan!');
+        btn.disabled = false;
+        btn.textContent = '⛔ CLOCK OUT SEKARANG';
+        return;
+      }
+      
+      const now = new Date();
+      const time = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      
+      const clockInParts = attendance.clock_in_time.split(':');
+      const clockInDate = new Date();
+      clockInDate.setHours(parseInt(clockInParts[0]), parseInt(clockInParts[1]), parseInt(clockInParts[2] || 0));
+      
+      const diffMs = now - clockInDate;
+      const totalHours = Math.max(0, diffMs / (1000 * 60 * 60));
+      
+      const data = {
+        ...attendance,
+        clock_out_time: time,
+        clock_out_note: note,
+        total_hours: parseFloat(totalHours.toFixed(2))
+      };
+
+      const result = await fetchFromGAS('clockOut', { data });
+      
+      if (result.status === 'success') {
+        showMessage('✅ Clock out berhasil disimpan!');
+        // Update data di state
+        attendance.clock_out_time = data.clock_out_time;
+        attendance.clock_out_note = data.clock_out_note;
+        attendance.total_hours = data.total_hours;
+        render(); // Render ulang
+      } else {
+        showMessage('Gagal clock out.');
+        btn.disabled = false;
+        btn.textContent = '⛔ CLOCK OUT SEKARANG';
+      }
+    };
+
+    // --- Utilitas ---
+    function showMessage(message) {
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 10000;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // --- Mulai Aplikasi ---
+    init();
+  </script>
+</body>
+</html>
