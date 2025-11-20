@@ -1,1043 +1,396 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PayBoss HRIS System</title>
-    
+    <title>PayBoss HRIS Mobile</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Face API -->
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Lucide Icons (Pengganti FontAwesome agar mirip referensi) -->
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SweetAlert2 untuk Notifikasi Cantik -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        emerald: { 50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46' }
-                    },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
-        .hidden-section { display: none !important; }
-        .active-section { display: block; animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Camera Styling */
-        .camera-wrapper { position: relative; width: 100%; border-radius: 1rem; overflow: hidden; background: black; aspect-ratio: 4/3; }
-        video { transform: scaleX(-1); width: 100%; height: 100%; object-fit: cover; }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
-        
-        /* Bottom Nav Styling */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background: white; 
-            border-top: 1px solid #e2e8f0;
-            display: flex; justify-content: space-around; align-items: center;
-            z-index: 50; 
-            padding-bottom: env(safe-area-inset-bottom, 10px);
-            height: 70px;
-        }
-        .nav-item { 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            flex: 1; color: #94a3b8; transition: all 0.2s; font-size: 0.7rem; font-weight: 500; gap: 4px;
-        }
-        .nav-item.active { color: #059669; }
-        .nav-item svg { transition: transform 0.2s; }
-        .nav-item.active svg { transform: translateY(-2px); }
+        /* Mobile Optimization */
+        body { -webkit-tap-highlight-color: transparent; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="text-gray-800 bg-gray-50">
+<body class="bg-gray-50 font-sans text-gray-800 select-none">
 
-    <!-- 1. LOGIN VIEW (Gaya Modern Gradient) -->
-    <div id="viewLogin" class="active-section min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 flex flex-col items-center justify-center p-6">
-        <div class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden transform transition-all">
-            <!-- Header Card -->
-            <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 text-center">
-                <div class="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 shadow-inner">
-                    <span class="text-white text-3xl font-bold tracking-tighter">PB</span>
-                </div>
-                <h1 class="text-2xl font-bold text-white">PayBoss HRIS</h1>
-                <p class="text-emerald-100 mt-2 text-sm opacity-90">Sistem Absensi & Manajemen Karyawan</p>
-            </div>
-            
-            <!-- Form -->
-            <div class="p-8 space-y-6">
-                <div class="text-center">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Silakan Masuk</h2>
-                </div>
-                
-                <form onsubmit="handleLogin(event)" class="space-y-4">
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <i data-lucide="user" width="20"></i>
-                        </div>
-                        <input type="text" id="loginId" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" placeholder="ID Karyawan" required>
-                    </div>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <i data-lucide="lock" width="20"></i>
-                        </div>
-                        <input type="password" id="loginPass" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" placeholder="Password" required>
-                    </div>
-                    
-                    <button type="submit" id="btnLogin" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition shadow-lg hover:shadow-emerald-500/30 active:scale-95 transform duration-200 flex items-center justify-center gap-2">
-                        <span>Masuk Aplikasi</span>
-                        <i data-lucide="arrow-right" width="18"></i>
-                    </button>
-                </form>
-                
-                <div class="text-center mt-6 text-xs text-gray-400">
-                    <p>🔒 Data aman & terenkripsi</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 2. EMPLOYEE VIEW -->
-    <div id="viewEmployee" class="hidden-section min-h-screen pb-24 bg-gray-50">
-        
-        <!-- Modern Header -->
-        <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between sticky top-0 z-40">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center overflow-hidden">
-                    <img id="headerEmpPhoto" src="" class="w-full h-full object-cover hidden">
-                    <span id="headerInitials" class="text-emerald-700 font-bold text-lg">U</span>
-                </div>
-                <div>
-                    <h1 class="font-bold text-gray-800 text-sm leading-tight" id="empNameDisplay">Nama User</h1>
-                    <p class="text-xs text-emerald-600 font-medium" id="empPosDisplay">Posisi</p>
-                </div>
-            </div>
-            <button onclick="logout()" class="p-2 rounded-full hover:bg-gray-100 text-gray-400 transition">
-                <i data-lucide="log-out" width="20"></i>
-            </button>
-        </header>
-
-        <!-- Content Area -->
-        <div class="p-4 max-w-md mx-auto space-y-6">
-
-            <!-- TAB: ABSEN (HOME) -->
-            <div id="tabEmpHome" class="active-section space-y-5">
-                
-                <!-- Hero Card (Gradient) -->
-                <div class="p-5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl shadow-lg shadow-emerald-500/20 relative overflow-hidden">
-                    <!-- Decorative BG Icon -->
-                    <i data-lucide="shield-check" class="absolute -right-4 -bottom-4 text-white opacity-10" width="120" height="120"></i>
-                    
-                    <div class="relative z-10">
-                        <p class="text-emerald-100 text-xs font-medium mb-1">Hari Ini</p>
-                        <h2 class="text-2xl font-bold mb-3" id="currentShiftDisplay">Shift: -</h2>
-                        
-                        <div class="flex items-center gap-4 text-sm">
-                            <div class="flex items-center bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                                <i data-lucide="clock" width="14" class="mr-1.5"></i>
-                                <span id="todayShiftTime">--:--</span>
-                            </div>
-                            <div class="flex items-center bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                                <i data-lucide="map-pin" width="14" class="mr-1.5"></i>
-                                <span id="gpsStatusText">Mencari...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Status & Camera Card -->
-                <div class="bg-white rounded-2xl p-5 shadow-sm border border-emerald-50">
-                    <h3 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                        <i data-lucide="camera" width="16" class="text-emerald-600"></i>
-                        Verifikasi Kehadiran
-                    </h3>
-
-                    <!-- Camera Box -->
-                    <div class="camera-wrapper mb-4 ring-4 ring-gray-100" id="cameraBox">
-                        <video id="video" autoplay muted playsinline></video>
-                        <canvas id="overlay"></canvas>
-                        <!-- Status Overlay -->
-                        <div class="absolute bottom-3 left-0 right-0 flex justify-center z-20">
-                            <span id="instructionBox" class="bg-black/70 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg">
-                                <i data-lucide="loader-2" width="12" class="animate-spin"></i>
-                                Tunggu Kamera...
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="prepareAbsen('IN')" class="group relative overflow-hidden bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition-all">
-                            <div class="relative z-10 flex flex-col items-center gap-1">
-                                <i data-lucide="log-in" width="24"></i>
-                                <span>MASUK</span>
-                            </div>
-                        </button>
-                        <button onclick="prepareAbsen('OUT')" class="group relative overflow-hidden bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 py-4 rounded-xl font-bold shadow-sm active:scale-95 transition-all">
-                            <div class="relative z-10 flex flex-col items-center gap-1">
-                                <i data-lucide="log-out" width="24"></i>
-                                <span>PULANG</span>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Today Status -->
-                <div id="attendanceSuccessCard" class="hidden bg-emerald-50 rounded-xl p-4 border border-emerald-100 flex items-center gap-4">
-                    <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
-                        <i data-lucide="check-circle-2" width="24"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-emerald-800 text-sm">Sudah Absen Masuk</h4>
-                        <p class="text-xs text-emerald-600" id="lastAttTime">-</p>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- TAB: TUGAS -->
-            <div id="tabEmpTasks" class="hidden-section space-y-4">
-                <div class="bg-white rounded-xl shadow-sm p-5">
-                    <div class="flex items-center mb-4">
-                        <div class="p-2 bg-emerald-100 rounded-lg mr-3">
-                            <i data-lucide="briefcase" class="text-emerald-600" width="20"></i>
-                        </div>
-                        <h3 class="font-bold text-gray-800">Checklist Tugas</h3>
-                    </div>
-                    <div id="empTaskList" class="space-y-3">
-                        <!-- Tasks Injected Here -->
-                    </div>
-                    <button onclick="submitChecklist()" class="w-full mt-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-bold text-sm transition active:scale-95">
-                        Simpan Laporan
-                    </button>
-                </div>
-            </div>
-
-            <!-- TAB: JADWAL -->
-            <div id="tabEmpRoster" class="hidden-section space-y-4">
-                <div class="bg-white rounded-xl shadow-sm p-5">
-                    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <i data-lucide="calendar" width="18" class="text-emerald-600"></i>
-                        Jadwal Minggu Ini
-                    </h3>
-                    <div id="empRosterList" class="space-y-2">
-                        <!-- Roster Injected Here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB: PROFIL -->
-            <div id="tabEmpProfile" class="hidden-section space-y-5">
-                <div class="bg-white rounded-xl shadow-sm p-6 text-center">
-                    <div class="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-4 shadow-lg ring-4 ring-emerald-50">
-                        <img id="profilePhotoBig" src="" class="w-full h-full rounded-full object-cover hidden">
-                        <span id="profileInitialsBig" class="text-white text-3xl font-bold">U</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800" id="profileNameBig">-</h3>
-                    <p class="text-emerald-600 font-medium text-sm" id="profilePosBig">-</p>
-                    
-                    <div class="grid grid-cols-3 gap-4 mt-6">
-                        <div class="p-3 bg-emerald-50 rounded-xl">
-                            <p class="text-2xl font-bold text-emerald-700" id="myStatPresent">0</p>
-                            <p class="text-xs text-gray-500 mt-1">Hadir</p>
-                        </div>
-                        <div class="p-3 bg-amber-50 rounded-xl">
-                            <p class="text-2xl font-bold text-amber-700" id="myStatLate">0</p>
-                            <p class="text-xs text-gray-500 mt-1">Telat</p>
-                        </div>
-                        <div class="p-3 bg-red-50 rounded-xl">
-                            <p class="text-2xl font-bold text-red-700" id="myStatOutside">0</p>
-                            <p class="text-xs text-gray-500 mt-1">Luar</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bottom Nav (Mobile) -->
-        <div class="bottom-nav">
-            <button onclick="navEmp('EmpHome')" id="navEmpHome" class="nav-item active">
-                <i data-lucide="fingerprint" width="22"></i>
-                <span>Absen</span>
-            </button>
-            <button onclick="navEmp('EmpTasks')" id="navEmpTasks" class="nav-item">
-                <i data-lucide="check-square" width="22"></i>
-                <span>Tugas</span>
-            </button>
-            <button onclick="navEmp('EmpRoster')" id="navEmpRoster" class="nav-item">
-                <i data-lucide="calendar-days" width="22"></i>
-                <span>Jadwal</span>
-            </button>
-            <button onclick="navEmp('EmpProfile')" id="navEmpProfile" class="nav-item">
-                <i data-lucide="user" width="22"></i>
-                <span>Saya</span>
-            </button>
-        </div>
-
-        <!-- Reason Modal (Improved UI) -->
-        <div id="reasonModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end justify-center sm:items-center p-4">
-            <div class="bg-white w-full max-w-sm rounded-2xl p-6 animate-fadeIn shadow-2xl">
-                <div class="flex items-center gap-3 mb-4 text-amber-600">
-                    <i data-lucide="alert-triangle" width="24"></i>
-                    <h3 class="font-bold text-lg text-gray-800">Konfirmasi Absensi</h3>
-                </div>
-                <p class="text-sm text-gray-600 mb-4 leading-relaxed" id="reasonMessage">
-                    Posisi Anda terdeteksi di luar area kantor. Mohon berikan keterangan.
-                </p>
-                <div class="space-y-3">
-                    <select id="attendanceReason" class="w-full p-3 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
-                        <option value="">-- Pilih Alasan --</option>
-                        <option value="Dinas Luar">🚗 Dinas Luar</option>
-                        <option value="Sakit">💊 Sakit</option>
-                        <option value="Izin">📝 Izin</option>
-                        <option value="GPS Error">📡 GPS Error</option>
-                    </select>
-                    <button onclick="executeSubmit()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold shadow-lg transition">
-                        KIRIM ABSEN
-                    </button>
-                    <button onclick="document.getElementById('reasonModal').classList.add('hidden')" class="w-full py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl">
-                        Batal
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. MANAGER VIEW (Updated Tab Style) -->
-    <div id="viewManager" class="hidden-section min-h-screen bg-gray-50">
-        
-        <!-- Header -->
-        <header class="bg-white shadow-sm sticky top-0 z-30">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16 items-center">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded bg-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-md">PB</div>
-                        <span class="text-lg font-bold text-gray-800">PayBoss HRIS</span>
-                    </div>
-                    <button onclick="logout()" class="flex items-center text-gray-500 hover:text-red-600 transition text-sm font-medium">
-                        <i data-lucide="log-out" width="18" class="mr-1"></i> Keluar
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Scrollable Tabs -->
-            <div class="border-t border-gray-100 overflow-x-auto">
-                <nav class="flex space-x-6 px-4 min-w-max" id="mgrTabs">
-                    <button onclick="switchMgrTab('dash')" id="tabMgrDash" class="tab-mgr active flex items-center py-4 px-1 border-b-2 font-medium text-sm text-emerald-600 border-emerald-500">
-                        <i data-lucide="bar-chart-3" width="18" class="mr-2"></i> Dashboard
-                    </button>
-                    <button onclick="switchMgrTab('karyawan')" id="tabMgrKaryawan" class="tab-mgr flex items-center py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
-                        <i data-lucide="users" width="18" class="mr-2"></i> Karyawan
-                    </button>
-                    <button onclick="switchMgrTab('roster')" id="tabMgrRoster" class="tab-mgr flex items-center py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
-                        <i data-lucide="calendar" width="18" class="mr-2"></i> Jadwal
-                    </button>
-                    <button onclick="switchMgrTab('absensi')" id="tabMgrAbsensi" class="tab-mgr flex items-center py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
-                        <i data-lucide="history" width="18" class="mr-2"></i> Riwayat
-                    </button>
-                    <button onclick="switchMgrTab('jobdesk')" id="tabMgrJobdesk" class="tab-mgr flex items-center py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
-                        <i data-lucide="check-circle" width="18" class="mr-2"></i> Tugas
-                    </button>
-                </nav>
-            </div>
-        </header>
-
-        <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
-            
-            <!-- DASHBOARD -->
-            <div id="mgrPage-dash" class="mgr-page space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-emerald-500 flex items-center">
-                        <div class="p-3 bg-emerald-100 rounded-lg text-emerald-600 mr-4">
-                            <i data-lucide="users" width="24"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Total Karyawan</p>
-                            <p class="text-2xl font-bold text-gray-900" id="statTotalEmp">0</p>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 flex items-center">
-                        <div class="p-3 bg-blue-100 rounded-lg text-blue-600 mr-4">
-                            <i data-lucide="user-check" width="24"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Hadir Hari Ini</p>
-                            <p class="text-2xl font-bold text-gray-900" id="statHadir">0</p>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-amber-500 flex items-center">
-                        <div class="p-3 bg-amber-100 rounded-lg text-amber-600 mr-4">
-                            <i data-lucide="clock" width="24"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Terlambat</p>
-                            <p class="text-2xl font-bold text-gray-900" id="statTelat">0</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100">
-                        <h3 class="text-lg font-bold text-gray-800">Aktivitas Terakhir</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
-                                <tr>
-                                    <th class="px-6 py-3">Waktu</th>
-                                    <th class="px-6 py-3">Karyawan</th>
-                                    <th class="px-6 py-3">Status</th>
-                                    <th class="px-6 py-3">Foto</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tableHistoryShort" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- KARYAWAN -->
-            <div id="mgrPage-karyawan" class="mgr-page hidden-section space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-gray-800">Daftar Karyawan</h2>
-                    <button onclick="openEmployeeModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 transition flex items-center gap-2">
-                        <i data-lucide="plus" width="16"></i> Tambah
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="gridKaryawan"></div>
-            </div>
-
-            <!-- ROSTER -->
-            <div id="mgrPage-roster" class="mgr-page hidden-section space-y-6">
-                <div class="bg-white rounded-xl shadow-sm p-6">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                        <h2 class="text-lg font-bold text-gray-800">Kelola Jadwal Shift</h2>
-                        <div class="flex gap-3 w-full sm:w-auto">
-                            <input type="month" id="rosterMonthPicker" class="border border-gray-300 p-2 rounded-lg text-sm flex-1 focus:ring-emerald-500 focus:border-emerald-500" onchange="renderRosterGrid()">
-                            <button onclick="saveRosterChanges()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:bg-emerald-700 transition flex items-center gap-2">
-                                <i data-lucide="save" width="16"></i> Simpan
-                            </button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto border rounded-xl">
-                        <table class="w-full text-sm text-center border-collapse" id="rosterGridTable"></table>
-                    </div>
-                    <div class="mt-4 flex flex-wrap gap-4 text-xs text-gray-500">
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-blue-100 rounded border border-blue-200"></span> Pagi</div>
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-amber-100 rounded border border-amber-200"></span> Siang</div>
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-purple-100 rounded border border-purple-200"></span> Malam</div>
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-gray-100 rounded border border-gray-200"></span> Off</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ABSENSI -->
-            <div id="mgrPage-absensi" class="mgr-page hidden-section bg-white rounded-xl shadow-sm p-6">
-                 <h2 class="text-lg font-bold text-gray-800 mb-4">Laporan Lengkap</h2>
-                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left whitespace-nowrap">
-                        <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
-                            <tr><th class="p-3">Waktu</th><th class="p-3">Nama</th><th class="p-3">Status</th><th class="p-3">Keterangan</th><th class="p-3">Bukti</th></tr>
-                        </thead>
-                        <tbody id="tableHistoryFull" class="divide-y divide-gray-100"></tbody>
-                    </table>
-                 </div>
-            </div>
-
-             <!-- JOBDESK -->
-             <div id="mgrPage-jobdesk" class="mgr-page hidden-section bg-white rounded-xl shadow-sm p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-lg font-bold text-gray-800">Template Tugas</h2>
-                    <button onclick="openJobDeskModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 flex items-center gap-2">
-                        <i data-lucide="plus" width="16"></i> Tambah
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left whitespace-nowrap">
-                        <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
-                            <tr><th class="p-3">Posisi</th><th class="p-3">Tugas</th><th class="p-3">Target</th><th class="p-3 text-right">Aksi</th></tr>
-                        </thead>
-                        <tbody id="tableJobDesk" class="divide-y divide-gray-100"></tbody>
-                    </table>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <!-- MODALS -->
-    <div id="modalKaryawan" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg mb-4 text-gray-800">Data Karyawan</h3>
-            <form onsubmit="saveEmployee(event)" class="space-y-4 text-sm">
-                <input type="hidden" id="empActionType" value="add">
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="text" id="eId" placeholder="ID (PB...)" class="border p-3 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none" required>
-                    <input type="text" id="eNama" placeholder="Nama Lengkap" class="border p-3 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none" required>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <select id="ePosisi" class="border p-3 rounded-xl bg-gray-50 focus:bg-white outline-none" required>
-                        <option value="">Pilih Role...</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Koordinator">Koordinator</option>
-                        <option value="Pramusaji">Pramusaji</option>
-                        <option value="Bartender">Bartender</option>
-                        <option value="Chef">Chef</option>
-                        <option value="Kasir">Kasir</option>
-                    </select>
-                    <input type="text" id="ePass" placeholder="Password" class="border p-3 rounded-xl bg-gray-50 focus:bg-white outline-none" required>
-                </div>
-                <!-- Fields lain disembunyikan untuk ringkas, bisa ditambah sesuai kebutuhan -->
-                <input type="url" id="eFoto" placeholder="URL Foto (Imgur/Lainnya)" class="w-full border p-3 rounded-xl bg-gray-50 focus:bg-white outline-none">
-                
-                <div class="flex justify-end gap-3 pt-4 border-t">
-                    <button type="button" onclick="document.getElementById('modalKaryawan').classList.add('hidden')" class="px-5 py-2.5 rounded-xl text-gray-600 font-bold hover:bg-gray-100">Batal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <div id="modalJobDesk" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-             <h3 class="font-bold text-lg mb-4 text-gray-800">Tambah Tugas</h3>
-             <form onsubmit="saveJobDesk(event)" class="space-y-4">
-                 <select id="jdPosisi" class="w-full border p-3 rounded-xl bg-gray-50 focus:bg-white outline-none" required>
-                     <option value="">-- Pilih Posisi --</option>
-                     <option value="Pramusaji">Pramusaji</option>
-                     <option value="Bartender">Bartender</option>
-                     <option value="Chef">Chef</option>
-                     <option value="Kasir">Kasir</option>
-                 </select>
-                 <input type="text" id="jdTugas" placeholder="Nama Tugas" class="w-full border p-3 rounded-xl bg-gray-50 focus:bg-white outline-none" required>
-                 <input type="text" id="jdTarget" placeholder="Target (Opsional)" class="w-full border p-3 rounded-xl bg-gray-50 focus:bg-white outline-none">
-                 <div class="flex justify-end gap-3 pt-4">
-                     <button type="button" onclick="document.getElementById('modalJobDesk').classList.add('hidden')" class="px-5 py-2.5 rounded-xl text-gray-600 font-bold hover:bg-gray-100">Batal</button>
-                     <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow">Simpan</button>
-                 </div>
-             </form>
-        </div>
-    </div>
-
-    <!-- JAVASCRIPT LOGIC (Merged) -->
+    <!-- STATE MANAGER & LOGIC -->
     <script>
-        // === CONFIGURATION ===
-        const API_URL = "https://script.google.com/macros/s/AKfycbw1gc5n2TQi1RpaV96H6Ur9F4t4_bJTR3asFCshbxbJHSL7Q6JUzIQilAm3yRZ_cxUtqw/exec"; 
-        const OFFICE_LOC = { lat: -2.171698, lng: 115.402943, radius: 100 }; 
-        const SHIFTS = { 'Pagi': {s:8, e:16}, 'Siang': {s:16, e:24}, 'Malam': {s:0, e:8} };
+        // === KONFIGURASI (GANTI URL INI NANTI SETELAH DEPLOY GAS) ===
+        const API_URL = "https://script.google.com/macros/s/AKfycbwtZOLyC9HPsA8_SNRxfQwBhk2WvkAtZrOJMWTgKEnYicE6ooujaZqyNsuOwK6CHIFM4A/exec"; 
+        
+        const OFFICE_LOC = { lat: -2.171693116948542, lng: 115.40295890527945, radius: 200 };
 
         // Global State
-        let currentUser = null;
-        let globalData = {};
-        let currentPosition = null;
-        let isInsideArea = false;
-        let livenessPassed = false;
-        let selectedMode = 'IN';
-        let rosterChanges = {}; 
-
-        // Init
-        document.addEventListener('DOMContentLoaded', () => {
-            refreshIcons();
-            setInterval(updateClock, 1000);
-        });
+        let currentUser = null; // Data user login
+        let appData = { roster: [], tasks: [], attendance: [], announcements: [] };
         
-        function refreshIcons() {
+        // --- Helper: Format Rupiah/Tanggal ---
+        const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
+        const getDist = (lat1, lon1, lat2, lon2) => {
+            const R = 6371e3; 
+            const q = (lat2-lat1) * Math.PI/180;
+            const w = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(q/2)*Math.sin(q/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(w/2)*Math.sin(w/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        };
+
+        // --- API CALLS ---
+        async function apiCall(action, payload = {}) {
+            Swal.fire({title: 'Memuat...', didOpen: () => Swal.showLoading()});
+            try {
+                // Simulasi jika URL belum diset (Untuk demo tampilan)
+                if(API_URL === "https://script.google.com/macros/s/AKfycbwtZOLyC9HPsA8_SNRxfQwBhk2WvkAtZrOJMWTgKEnYicE6ooujaZqyNsuOwK6CHIFM4A/exec") {
+                    console.warn("API URL Belum Diset. Menggunakan Mock Data.");
+                    Swal.close();
+                    return mockResponse(action, payload);
+                }
+
+                const form = new FormData();
+                form.append('action', action);
+                form.append('data', JSON.stringify(payload));
+                
+                const res = await fetch(API_URL, { method: 'POST', body: form });
+                const json = await res.json();
+                Swal.close();
+                return json;
+            } catch (e) {
+                Swal.fire('Error', 'Gagal koneksi ke server', 'error');
+                console.error(e);
+                return null;
+            }
+        }
+
+        // --- MOCK RESPONSE (Hapus nanti jika sudah connect) ---
+        function mockResponse(action, p) {
+            if(action === 'login') {
+                if(p.id === 'PB251102') return { status: 'success', user: { id: 'PB251102', name: 'Ilham Ali', role: 'Pramusaji', photo: 'https://i.imgur.com/ijK3PRX.jpeg' }};
+                if(p.id === 'MANAGER') return { status: 'success', user: { id: 'MANAGER', name: 'Pak Boss', role: 'Manager' }};
+                return { status: 'fail' };
+            }
+            return { status: 'success' };
+        }
+
+        // --- FUNGSI NAVIGASI ---
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(el => el.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
+            
+            // Update Bottom Nav Active State
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.replace('text-emerald-600', 'text-gray-400'));
+            const activeBtn = document.getElementById(`btn-${pageId}`);
+            if(activeBtn) activeBtn.classList.replace('text-gray-400', 'text-emerald-600');
+            
             lucide.createIcons();
         }
 
-        function updateClock() {
-            const now = new Date();
-            // Update di berbagai tempat jika elemen ada
-            const timeString = now.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-            if(document.getElementById('todayShiftTime') && currentUser) {
-                 // Logic shift time display update handled in renderEmpRoster usually, 
-                 // but simple clock can be distinct.
-            }
-        }
-
-        // === AUTHENTICATION ===
+        // --- LOGIN LOGIC ---
         async function handleLogin(e) {
             e.preventDefault();
             const id = document.getElementById('loginId').value;
             const pass = document.getElementById('loginPass').value;
-            const btn = document.getElementById('btnLogin');
-            const originalBtnContent = btn.innerHTML;
 
-            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Memproses...';
-            btn.disabled = true;
-            refreshIcons();
-
-            try {
-                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', id: id, password: pass }) });
-                const json = await res.json();
-
-                if (json.status === 'success') {
-                    currentUser = json.data;
-                    currentUser.role = json.role;
-                    await loadData();
-                    
-                    document.getElementById('viewLogin').classList.remove('active-section');
-                    document.getElementById('viewLogin').classList.add('hidden-section');
-
-                    if (currentUser.role === 'manager') showManagerView();
-                    else showEmployeeView();
+            const res = await apiCall('login', { id, pass });
+            if (res && res.status === 'success') {
+                currentUser = res.user;
+                renderProfile();
+                if(currentUser.role === 'Manager') {
+                    switchPage('manager-dashboard');
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Login Gagal', text: json.message, confirmButtonColor: '#059669' });
+                    switchPage('home');
+                    initGPS(); // Start GPS tracking for employee
                 }
-            } catch (err) { 
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Koneksi Gagal', confirmButtonColor: '#059669' }); 
-            } finally { 
-                btn.innerHTML = originalBtnContent; 
-                btn.disabled = false;
-                refreshIcons();
+            } else {
+                Swal.fire('Gagal', 'ID atau Password Salah', 'error');
             }
         }
 
-        async function loadData() {
-            try {
-                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_data' }) });
-                globalData = await res.json();
-            } catch(e) { console.error("Load Data Error", e); }
-        }
-
-        function logout() {
+        function handleLogout() {
+            currentUser = null;
             location.reload();
         }
 
-        // === EMPLOYEE VIEW LOGIC ===
-        function showEmployeeView() {
-            document.getElementById('viewEmployee').classList.remove('hidden-section');
-            document.getElementById('viewEmployee').classList.add('active-section');
-            
-            // Header Info
-            document.getElementById('empNameDisplay').innerText = currentUser.nama;
-            document.getElementById('profileNameBig').innerText = currentUser.nama;
-            document.getElementById('empPosDisplay').innerText = currentUser.posisi;
-            document.getElementById('profilePosBig').innerText = currentUser.posisi;
-            
-            // Photo / Initials
-            const initials = currentUser.nama.charAt(0).toUpperCase();
-            document.getElementById('headerInitials').innerText = initials;
-            document.getElementById('profileInitialsBig').innerText = initials;
-            
-            if(currentUser.foto) {
-                ['headerEmpPhoto', 'profilePhotoBig'].forEach(id => {
-                    const el = document.getElementById(id);
-                    el.src = currentUser.foto;
-                    el.classList.remove('hidden');
-                    el.nextElementSibling.classList.add('hidden'); // Hide text fallback
-                });
-            }
-
-            initFaceAPI();
-            watchLocation();
-            renderEmpRoster();
-            renderEmpJobDesk();
-            renderEmpStats();
-            navEmp('EmpHome');
-        }
-
-        function navEmp(tab) {
-            // Hide all tabs
-            ['EmpHome', 'EmpTasks', 'EmpRoster', 'EmpProfile'].forEach(t => {
-                document.getElementById('tab' + t).classList.add('hidden-section');
-                document.getElementById('tab' + t).classList.remove('active-section');
-                document.getElementById('nav' + t).classList.remove('active', 'text-emerald-600');
-            });
-            
-            // Show selected
-            document.getElementById('tab' + tab).classList.remove('hidden-section');
-            document.getElementById('tab' + tab).classList.add('active-section');
-            
-            // Active Nav State
-            const navBtn = document.getElementById('nav' + tab);
-            navBtn.classList.add('active', 'text-emerald-600');
-            
-            refreshIcons();
-        }
-
-        // --- Renders ---
-        function renderEmpRoster() {
-            const rosterList = document.getElementById('empRosterList');
-            const myRoster = globalData.roster.rows.filter(r => String(r[0]) == String(currentUser.id)).sort((a,b)=>new Date(a[1])-new Date(b[1]));
-            const todayStr = new Date().toISOString().slice(0,10);
-            
-            // Current Shift Header
-            const todayRoster = myRoster.find(r => new Date(r[1]).toISOString().slice(0,10) == todayStr);
-            const shift = todayRoster ? todayRoster[2] : 'Off';
-            
-            document.getElementById('currentShiftDisplay').innerText = `Shift ${shift}`;
-            if(SHIFTS[shift]) {
-                document.getElementById('todayShiftTime').innerText = `${String(SHIFTS[shift].s).padStart(2,'0')}:00 - ${String(SHIFTS[shift].e).padStart(2,'0')}:00`;
-            } else {
-                document.getElementById('todayShiftTime').innerText = "Libur";
-            }
-
-            // Check Today Attendance
-            const myAtt = globalData.attendance.rows.find(a => String(a[2]) == String(currentUser.id) && new Date(a[0]).toDateString() == new Date().toDateString() && a[3] == 'IN');
-            if(myAtt) {
-                document.getElementById('attendanceSuccessCard').classList.remove('hidden');
-                document.getElementById('lastAttTime').innerText = `Pukul ${new Date(myAtt[0]).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}`;
-            }
-
-            // List Roster
-            let html = '';
-            myRoster.filter(r => new Date(r[1]) >= new Date().setHours(0,0,0,0)).slice(0,7).forEach(r => {
-                const dateObj = new Date(r[1]);
-                const isToday = dateObj.toISOString().slice(0,10) === todayStr;
-                const shiftColor = r[2] === 'Pagi' ? 'bg-blue-100 text-blue-800' : r[2] === 'Siang' ? 'bg-amber-100 text-amber-800' : r[2] === 'Malam' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-600';
-                
-                html += `
-                <div class="flex justify-between items-center p-3 rounded-lg ${isToday ? 'bg-emerald-50 border-l-4 border-emerald-500' : 'bg-gray-50'}">
-                    <div>
-                        <p class="font-medium text-sm text-gray-800">${dateObj.toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'short'})}</p>
-                        ${isToday ? '<span class="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 rounded font-bold">Hari Ini</span>' : ''}
-                    </div>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${shiftColor}">${r[2]}</span>
-                </div>`;
-            });
-            rosterList.innerHTML = html || '<p class="text-center text-gray-400 text-sm py-4">Belum ada jadwal.</p>';
-        }
-
-        function renderEmpJobDesk() {
-            const tasks = globalData.jobdesk.rows.filter(t => String(t[0]).toLowerCase() == String(currentUser.posisi).toLowerCase());
-            const done = globalData.checklist.rows.filter(c => String(c[1])==String(currentUser.id) && new Date(c[0]).toDateString()==new Date().toDateString()).map(c=>c[2]);
-            
-            let html = '';
-            tasks.forEach(t => {
-                const isDone = done.includes(t[1]);
-                html += `
-                <label class="flex items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition border border-transparent hover:border-gray-200">
-                    <input type="checkbox" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500 task-checkbox" value="${t[1]}" ${isDone?'checked disabled':''}> 
-                    <span class="ml-3 text-sm ${isDone?'text-gray-400 line-through':'text-gray-700'}">${t[1]}</span>
-                </label>`;
-            });
-            document.getElementById('empTaskList').innerHTML = html || '<div class="text-center py-8 text-gray-400 flex flex-col items-center"><i data-lucide="clipboard-list" width="40" class="mb-2 opacity-50"></i><p>Tidak ada tugas khusus.</p></div>';
-            refreshIcons();
-        }
-
-        function renderEmpStats() {
-            const myAtts = globalData.attendance.rows.filter(a => String(a[2]) == String(currentUser.id));
-            const monthAtt = myAtts.filter(a => new Date(a[0]).getMonth() === new Date().getMonth());
-            document.getElementById('myStatPresent').innerText = monthAtt.filter(a => a[3] === 'IN').length;
-            document.getElementById('myStatLate').innerText = monthAtt.filter(a => a[4] && a[4].includes('Terlambat')).length;
-            document.getElementById('myStatOutside').innerText = monthAtt.filter(a => a[4] && a[4].includes('Luar')).length;
-        }
-
-        // === FACE API & LOCATION ===
-        async function initFaceAPI() {
-             try {
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
-                    faceapi.nets.faceLandmark68TinyNet.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights')
-                ]);
-                const video = document.getElementById('video');
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(stream => {
-                    video.srcObject = stream;
-                    video.addEventListener('play', () => {
-                        const canvas = document.getElementById('overlay');
-                        faceapi.matchDimensions(canvas, { width: video.offsetWidth, height: video.offsetHeight });
-                        setInterval(async () => {
-                            if(livenessPassed) return;
-                            const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks(true);
-                            if(det) { 
-                                livenessPassed = true; 
-                                const box = document.getElementById('instructionBox');
-                                box.className = "bg-emerald-500 text-white px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg";
-                                box.innerHTML = '<i data-lucide="check-circle" width="14"></i> Wajah OK';
-                                refreshIcons();
-                                document.querySelector('.camera-wrapper').classList.add('ring-emerald-400');
-                            }
-                        }, 500);
-                    });
-                });
-             } catch(e) { console.log("Face API Error", e); }
-        }
-
-        function watchLocation() {
+        // --- ABSENSI LOGIC ---
+        let currentCoords = null;
+        function initGPS() {
             if(!navigator.geolocation) return;
-            navigator.geolocation.watchPosition(p => {
-                currentPosition = p;
-                const d = getDist(p.coords.latitude, p.coords.longitude, OFFICE_LOC.lat, OFFICE_LOC.lng);
-                const statusEl = document.getElementById('gpsStatusText');
+            navigator.geolocation.watchPosition(pos => {
+                currentCoords = pos.coords;
+                const dist = getDist(pos.coords.latitude, pos.coords.longitude, OFFICE_LOC.lat, OFFICE_LOC.lng);
+                const distEl = document.getElementById('distDisplay');
+                const statusEl = document.getElementById('gpsStatus');
                 
-                if(d > OFFICE_LOC.radius) { 
-                    isInsideArea = false; 
-                    statusEl.innerText = `Luar Area (${Math.round(d)}m)`;
-                    statusEl.parentElement.classList.add('bg-red-500/20', 'text-red-100');
-                    statusEl.parentElement.classList.remove('bg-white/20');
-                } else { 
-                    isInsideArea = true; 
-                    statusEl.innerText = "Di Kantor"; 
-                    statusEl.parentElement.classList.remove('bg-red-500/20', 'text-red-100');
-                    statusEl.parentElement.classList.add('bg-white/20');
+                if(distEl) distEl.innerText = Math.round(dist) + " meter";
+                
+                if(dist <= OFFICE_LOC.radius) {
+                    statusEl.innerHTML = `<span class="text-emerald-600 font-bold flex items-center gap-1"><i data-lucide="check-circle"></i> Dalam Radius</span>`;
+                    document.getElementById('btnAbsenMasuk').disabled = false;
+                    document.getElementById('btnAbsenMasuk').classList.replace('bg-gray-400', 'bg-emerald-600');
+                } else {
+                    statusEl.innerHTML = `<span class="text-red-500 font-bold flex items-center gap-1"><i data-lucide="alert-triangle"></i> Luar Radius</span>`;
+                    // Disable button logic here if strict
                 }
-            });
+                lucide.createIcons();
+            }, err => console.log(err), { enableHighAccuracy: true });
         }
 
-        function getDist(lat1, lon1, lat2, lon2) {
-            var R = 6371000; var dLat = (lat2-lat1) * (Math.PI/180); var dLon = (lon2-lon1) * (Math.PI/180); 
-            var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180)) * Math.cos(lat2*(Math.PI/180)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-        }
-
-        // === ATTENDANCE ACTIONS ===
-        function prepareAbsen(mode) {
-            selectedMode = mode;
-            if (!livenessPassed) return Swal.fire({icon:'warning', title:'Wajah Belum Terdeteksi', text:'Tunggu indikator wajah berwarna hijau.', confirmButtonColor: '#059669'});
-            
-            if (isInsideArea) {
-                executeSubmit();
-            } else {
-                document.getElementById('reasonModal').classList.remove('hidden');
-                // Reset select
-                document.getElementById('attendanceReason').value = "";
-            }
-        }
-
-        async function executeSubmit() {
-            const reasonVal = document.getElementById('attendanceReason').value;
-            if (!isInsideArea && !reasonVal) {
-                return Swal.fire({icon:'warning', title:'Wajib Isi Alasan', text:'Anda berada di luar jangkauan kantor.', confirmButtonColor: '#059669'});
-            }
-            
-            document.getElementById('reasonModal').classList.add('hidden');
-            Swal.fire({ title: 'Mengirim Data...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-
-            const canvas = document.getElementById('overlay');
+        // Kamera
+        let videoStream = null;
+        async function openCamera() {
             const video = document.getElementById('video');
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imgData = canvas.toDataURL('image/jpeg', 0.8);
+            document.getElementById('camera-ui').classList.remove('hidden');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = videoStream;
+            } catch (e) { Swal.fire('Error', 'Gagal akses kamera', 'error'); }
+        }
 
+        function takePhoto() {
+            const canvas = document.createElement('canvas');
+            const video = document.getElementById('video');
+            canvas.width = 300; canvas.height = 300;
+            canvas.getContext('2d').drawImage(video, 0, 0, 300, 300);
+            const base64 = canvas.toDataURL('image/jpeg', 0.7);
+            
+            // Stop Camera
+            videoStream.getTracks().forEach(t => t.stop());
+            document.getElementById('camera-ui').classList.add('hidden');
+            
+            submitAbsen(base64);
+        }
+
+        async function submitAbsen(photo) {
+            if(!currentCoords) return Swal.fire('GPS Error', 'Lokasi belum ditemukan', 'warning');
+            
             const payload = {
-                action: 'attendance',
-                id: currentUser.id,
-                nama: currentUser.nama,
-                mode: selectedMode, // IN or OUT
-                lat: currentPosition ? currentPosition.coords.latitude : 0,
-                lng: currentPosition ? currentPosition.coords.longitude : 0,
-                image: imgData,
-                reason: isInsideArea ? '' : reasonVal,
-                distance: isInsideArea ? 0 : 'Unknown Dist' // Simplified
+                empId: currentUser.id,
+                lat: currentCoords.latitude,
+                lng: currentCoords.longitude,
+                photo: photo,
+                type: 'IN', // Logic IN/OUT bisa ditambah nanti
+                time: new Date().toISOString()
             };
 
-            try {
-                await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-                await loadData();
-                renderEmpRoster(); // Refresh UI
-                Swal.fire({ icon: 'success', title: 'Berhasil!', text: `Absen ${selectedMode} tercatat.`, confirmButtonColor: '#059669' });
-            } catch(e) {
-                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Koneksi bermasalah.' });
-            }
-        }
-        
-        async function submitChecklist() {
-            const checked = Array.from(document.querySelectorAll('.task-checkbox:checked')).filter(c => !c.disabled).map(c => c.value);
-            if(checked.length === 0) return Swal.fire('Info', 'Tidak ada tugas baru yang dicentang.', 'info');
-
-            Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
-            const payload = { action: 'checklist', id: currentUser.id, tasks: checked };
-            
-            try {
-                await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-                await loadData();
-                renderEmpJobDesk();
-                Swal.fire({ icon: 'success', title: 'Tersimpan', confirmButtonColor: '#059669' });
-            } catch(e) { Swal.fire('Error', 'Gagal menyimpan', 'error'); }
+            await apiCall('submit_attendance', payload);
+            Swal.fire('Sukses', 'Absensi berhasil dikirim!', 'success');
         }
 
-        // === MANAGER LOGIC ===
-        function showManagerView() {
-            document.getElementById('viewManager').classList.remove('hidden-section');
-            document.getElementById('viewManager').classList.add('active-section');
-            switchMgrTab('dash');
-            updateMgrStats();
+        function renderProfile() {
+            document.getElementById('pName').innerText = currentUser.name;
+            document.getElementById('pRole').innerText = currentUser.role;
+            document.getElementById('pImg').src = currentUser.photo || 'https://via.placeholder.com/50';
         }
 
-        function switchMgrTab(tab) {
-            document.querySelectorAll('.mgr-page').forEach(el => el.classList.add('hidden-section'));
-            document.querySelectorAll('.tab-mgr').forEach(el => {
-                el.classList.remove('active', 'border-emerald-500', 'text-emerald-600');
-                el.classList.add('border-transparent', 'text-gray-500');
-            });
+    </script>
 
-            document.getElementById(`mgrPage-${tab}`).classList.remove('hidden-section');
-            const activeTab = document.getElementById(`tabMgr${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-            if(activeTab) {
-                activeTab.classList.add('active', 'border-emerald-500', 'text-emerald-600');
-                activeTab.classList.remove('border-transparent', 'text-gray-500');
-            }
+    <!-- === HALAMAN LOGIN === -->
+    <div id="login" class="page min-h-screen flex items-center justify-center bg-gradient-to-b from-emerald-600 to-teal-800 p-6">
+        <div class="bg-white w-full max-w-sm p-8 rounded-2xl shadow-2xl animate-fade-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-700 font-bold text-3xl border-4 border-emerald-50 shadow-inner">PB</div>
+                <h1 class="text-2xl font-bold text-gray-800">PayBoss HRIS</h1>
+                <p class="text-sm text-gray-400">Silakan login untuk melanjutkan</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 ml-1">ID KARYAWAN</label>
+                    <input id="loginId" type="text" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50" placeholder="Contoh: PB251102">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 ml-1">PASSWORD</label>
+                    <input id="loginPass" type="password" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50" placeholder="********">
+                </div>
+                <button type="submit" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg transition transform active:scale-95">MASUK</button>
+            </form>
+        </div>
+    </div>
 
-            if (tab === 'dash') updateMgrStats();
-            if (tab === 'absensi') renderMgrHistory();
-            if (tab === 'roster') { 
-                document.getElementById('rosterMonthPicker').value = new Date().toISOString().slice(0,7);
-                renderRosterGrid(); 
-            }
-            if (tab === 'karyawan') renderMgrKaryawan();
-            if (tab === 'jobdesk') renderMgrJobDesk();
-            refreshIcons();
-        }
-        
-        // Manager Renders (Simplified from original, styling updated)
-        function updateMgrStats() {
-            const emps = globalData.employees.rows.length;
-            const todayAtt = globalData.attendance.rows.filter(r => new Date(r[0]).toDateString() === new Date().toDateString() && r[3] === 'IN');
-            document.getElementById('statTotalEmp').innerText = emps;
-            document.getElementById('statHadir').innerText = todayAtt.length;
-            document.getElementById('statTelat').innerText = todayAtt.filter(r => r[4] && r[4].includes('Terlambat')).length;
-            
-            // Short history table
-            const history = globalData.attendance.rows.slice(-5).reverse();
-            document.getElementById('tableHistoryShort').innerHTML = history.map(r => `
-                <tr class="border-b border-gray-50 hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 text-gray-500">${new Date(r[0]).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}</td>
-                    <td class="px-6 py-4 font-medium text-gray-800">${r[1]}</td>
-                    <td class="px-6 py-4"><span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-full font-bold">${r[3]}</span></td>
-                    <td class="px-6 py-4"><a href="${r[8]}" target="_blank" class="text-emerald-600 hover:underline text-xs flex items-center gap-1"><i data-lucide="image" width="12"></i> Foto</a></td>
-                </tr>
-            `).join('');
-            refreshIcons();
-        }
-
-        function renderMgrKaryawan() {
-            document.getElementById('gridKaryawan').innerHTML = globalData.employees.rows.map(e => `
-                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition flex items-center gap-4 group">
-                    <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold overflow-hidden">
-                        ${e[5] ? `<img src="${e[5]}" class="w-full h-full object-cover">` : e[1].charAt(0)}
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="font-bold text-gray-800 group-hover:text-emerald-600 transition">${e[1]}</h3>
-                        <p class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded inline-block mt-1">${e[2]}</p>
-                        <p class="text-xs text-gray-400 mt-1">ID: ${e[0]}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="deleteEmployee('${e[0]}')" class="p-2 text-gray-400 hover:text-red-500 bg-gray-50 rounded-lg transition"><i data-lucide="trash-2" width="16"></i></button>
+    <!-- === HALAMAN EMPLOYEE HOME === -->
+    <div id="home" class="page hidden pb-24">
+        <!-- Header -->
+        <div class="bg-emerald-600 text-white p-6 pb-12 rounded-b-[2.5rem] shadow-lg relative z-10">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <img id="pImg" src="" class="w-12 h-12 rounded-full border-2 border-white bg-gray-200 object-cover">
+                    <div>
+                        <p class="text-emerald-100 text-xs mb-0.5">Selamat Datang,</p>
+                        <h2 id="pName" class="font-bold text-lg leading-none">Nama Karyawan</h2>
+                        <span id="pRole" class="text-xs bg-emerald-700 px-2 py-0.5 rounded mt-1 inline-block">Posisi</span>
                     </div>
                 </div>
-            `).join('');
-            refreshIcons();
-        }
+                <button onclick="handleLogout()" class="bg-white/20 p-2 rounded-full hover:bg-white/30 backdrop-blur-sm"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+
+        <!-- Stats Card Overlapping -->
+        <div class="px-5 -mt-8 relative z-20">
+            <div class="bg-white p-4 rounded-2xl shadow-md flex justify-between items-center border border-gray-100">
+                <div class="text-center w-1/3 border-r">
+                    <p class="text-xs text-gray-400 mb-1">Hadir</p>
+                    <h3 class="text-xl font-bold text-emerald-600">24</h3>
+                </div>
+                <div class="text-center w-1/3 border-r">
+                    <p class="text-xs text-gray-400 mb-1">Terlambat</p>
+                    <h3 class="text-xl font-bold text-orange-500">2</h3>
+                </div>
+                <div class="text-center w-1/3">
+                    <p class="text-xs text-gray-400 mb-1">Lembur</p>
+                    <h3 class="text-xl font-bold text-blue-600">4j</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- GPS & Absen Action -->
+        <div class="p-5 space-y-5">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="map-pin" class="w-5 h-5 text-emerald-600"></i> Status Lokasi</h3>
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
+                    <div>
+                        <p class="text-xs text-gray-400">Jarak ke Kantor</p>
+                        <p id="distDisplay" class="font-mono font-bold text-lg">Mencari...</p>
+                    </div>
+                    <div id="gpsStatus" class="text-sm">
+                        <span class="animate-pulse text-gray-400">Mendeteksi GPS...</span>
+                    </div>
+                </div>
+                
+                <button id="btnAbsenMasuk" onclick="openCamera()" disabled class="w-full mt-4 py-4 bg-gray-400 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition">
+                    <i data-lucide="camera"></i> ABSEN SEKARANG
+                </button>
+            </div>
+
+            <!-- Shift Info -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-5 rounded-2xl text-white shadow-md relative overflow-hidden">
+                <i data-lucide="clock" class="absolute right-[-10px] bottom-[-10px] w-32 h-32 text-white/10"></i>
+                <p class="text-blue-100 text-sm mb-1">Jadwal Hari Ini</p>
+                <h2 class="text-2xl font-bold mb-2">Shift Pagi</h2>
+                <div class="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg text-sm backdrop-blur-sm">
+                    <span>08:00 - 16:00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- === HALAMAN TUGAS & PENGUMUMAN === -->
+    <div id="tasks" class="page hidden pb-24 p-5">
+        <h2 class="text-xl font-bold mb-4">Pengumuman & Tugas</h2>
         
-        function openEmployeeModal() { document.getElementById('modalKaryawan').classList.remove('hidden'); }
-        async function saveEmployee(e) {
-            e.preventDefault();
-            const data = {
-                id: document.getElementById('eId').value, nama: document.getElementById('eNama').value,
-                posisi: document.getElementById('ePosisi').value, password: document.getElementById('ePass').value,
-                foto_url: document.getElementById('eFoto').value
-            };
-            document.getElementById('modalKaryawan').classList.add('hidden'); 
-            Swal.fire({title:'Menyimpan...', didOpen:()=>Swal.showLoading()});
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'manager_action', target: 'employee', type: 'add', data }) });
-            await loadData(); renderMgrKaryawan(); Swal.fire('Sukses', '', 'success');
-        }
-        async function deleteEmployee(id) {
-             if(!confirm('Hapus karyawan ini?')) return;
-             await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'manager_action', target: 'employee', type: 'delete', data: {id} }) });
-             await loadData(); renderMgrKaryawan();
-        }
+        <!-- Pengumuman -->
+        <div class="space-y-3 mb-6">
+            <div class="bg-orange-50 border border-orange-100 p-4 rounded-xl">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="bg-orange-200 text-orange-800 text-[10px] font-bold px-2 py-0.5 rounded">PENTING</span>
+                    <span class="text-xs text-gray-400">Hari Ini, 08:00</span>
+                </div>
+                <h3 class="font-bold text-gray-800">Meeting Bulanan</h3>
+                <p class="text-sm text-gray-600 mt-1">Seluruh staf wajib berkumpul di ruang meeting jam 14:00.</p>
+            </div>
+        </div>
 
-        function renderRosterGrid() {
-            const monthVal = document.getElementById('rosterMonthPicker').value;
-            if (!monthVal) return;
-            const year = parseInt(monthVal.split('-')[0]), month = parseInt(monthVal.split('-')[1]) - 1;
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
-            let html = '<thead><tr class="bg-gray-50 text-gray-500"><th class="p-3 border-b sticky left-0 bg-gray-50 z-10 text-left">Nama</th>';
-            for(let i=1; i<=daysInMonth; i++) {
-                const d = new Date(year, month, i);
-                html += `<th class="p-2 border-b min-w-[40px] text-xs font-normal ${d.getDay()===0||d.getDay()===6?'text-red-500 bg-red-50':''}">${i}</th>`;
-            }
-            html += '</tr></thead><tbody>';
+        <!-- Tugas Checklist -->
+        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="check-square"></i> Job Desk Harian</h3>
+        <div class="space-y-2">
+            <!-- Contoh Item Tugas -->
+            <label class="flex items-center p-4 bg-white border rounded-xl shadow-sm active:bg-gray-50 transition">
+                <input type="checkbox" class="w-5 h-5 text-emerald-600 rounded focus:ring-0 border-gray-300">
+                <span class="ml-3 text-sm font-medium text-gray-700">Membersihkan Area Bar</span>
+            </label>
+            <label class="flex items-center p-4 bg-white border rounded-xl shadow-sm active:bg-gray-50 transition">
+                <input type="checkbox" class="w-5 h-5 text-emerald-600 rounded focus:ring-0 border-gray-300">
+                <span class="ml-3 text-sm font-medium text-gray-700">Cek Stok Bahan Baku</span>
+            </label>
+        </div>
+    </div>
 
-            globalData.employees.rows.forEach(emp => {
-                html += `<tr class="hover:bg-gray-50 transition"><td class="p-2 border-b font-bold text-left sticky left-0 bg-white z-10 text-xs shadow-[1px_0_5px_-2px_rgba(0,0,0,0.1)]">${emp[1]}</td>`;
-                for(let i=1; i<=daysInMonth; i++) {
-                    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                    const roster = globalData.roster.rows.find(r => String(r[0]) == String(emp[0]) && new Date(r[1]).toISOString().slice(0,10) == dateStr);
-                    const shift = rosterChanges[`${emp[0]}_${dateStr}`] || (roster ? roster[2] : '');
-                    
-                    let colorClass = shift==='Pagi'?'bg-blue-100 text-blue-700':shift==='Siang'?'bg-amber-100 text-amber-700':shift==='Malam'?'bg-purple-100 text-purple-700':shift==='Off'?'bg-gray-100 text-gray-400':'';
-                    
-                    html += `<td class="p-1 border-b border-r border-gray-100 cursor-pointer hover:brightness-95 text-xs font-bold ${colorClass}" onclick="editRosterCell(this, '${emp[0]}', '${dateStr}')">${shift ? shift.charAt(0) : '-'}</td>`;
-                }
-                html += '</tr>';
-            });
-            document.getElementById('rosterGridTable').innerHTML = html + '</tbody>';
-        }
+    <!-- === HALAMAN MANAGER (DASHBOARD) === -->
+    <div id="manager-dashboard" class="page hidden p-5 pb-24">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Dashboard Manager</h1>
+            <button onclick="handleLogout()" class="text-red-500"><i data-lucide="log-out"></i></button>
+        </div>
 
-        function editRosterCell(cell, id, date) {
-            const map = {'-':'P', 'P':'S', 'S':'M', 'M':'L', 'L':'-'}; // Cycle: Empty -> P -> S -> M -> Libur -> Empty
-            const valMap = {'-':'', 'P':'Pagi', 'S':'Siang', 'M':'Malam', 'L':'Off'};
-            
-            const currentTxt = cell.innerText;
-            const nextCode = map[currentTxt] || 'P';
-            const nextVal = valMap[nextCode];
-            
-            cell.innerText = nextCode;
-            // Update style instantly
-            cell.className = `p-1 border-b border-r border-gray-100 cursor-pointer text-xs font-bold ${nextVal==='Pagi'?'bg-blue-100 text-blue-700':nextVal==='Siang'?'bg-amber-100 text-amber-700':nextVal==='Malam'?'bg-purple-100 text-purple-700':nextVal==='Off'?'bg-gray-100 text-gray-400':''}`;
-            
-            rosterChanges[`${id}_${date}`] = nextVal;
-        }
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                <p class="text-xs text-gray-500">Karyawan</p>
+                <h3 class="text-2xl font-bold">12</h3>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <p class="text-xs text-gray-500">Hadir</p>
+                <h3 class="text-2xl font-bold">8</h3>
+            </div>
+        </div>
 
-        async function saveRosterChanges() {
-             const keys = Object.keys(rosterChanges);
-             if (keys.length === 0) return Swal.fire('Info', 'Tidak ada perubahan.', 'info');
-             Swal.fire({title:'Menyimpan...', didOpen:()=>Swal.showLoading()});
-             const data = keys.map(k => { const [id, d] = k.split('_'); return { id, tanggal: d, shift: rosterChanges[k] }; });
-             await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'manager_action', target: 'roster', type: 'save_roster', data }) });
-             rosterChanges = {}; await loadData(); renderRosterGrid(); Swal.fire('Sukses', '', 'success');
-        }
-        
-        function renderMgrJobDesk() {
-            document.getElementById('tableJobDesk').innerHTML = globalData.jobdesk.rows.map(j => `
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="p-3 font-bold text-xs text-gray-600">${j[0]}</td>
-                    <td class="p-3 text-sm">${j[1]}</td>
-                    <td class="p-3 text-xs">${j[2]||'-'}</td>
-                    <td class="p-3 text-right"><button onclick="deleteJobDesk('${j[0]}','${j[1]}')" class="text-red-500 hover:bg-red-50 p-2 rounded transition"><i data-lucide="trash-2" width="16"></i></button></td>
-                </tr>`).join('');
-            refreshIcons();
-        }
-        function openJobDeskModal() { document.getElementById('modalJobDesk').classList.remove('hidden'); }
-        async function saveJobDesk(e) {
-            e.preventDefault();
-            const data = { posisi: document.getElementById('jdPosisi').value, tugas: document.getElementById('jdTugas').value, target: document.getElementById('jdTarget').value };
-            document.getElementById('modalJobDesk').classList.add('hidden'); Swal.fire({title:'Menyimpan...', didOpen:()=>Swal.showLoading()});
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'manager_action', target: 'jobdesk', type: 'add', data }) });
-            await loadData(); renderMgrJobDesk(); Swal.fire('Sukses', '', 'success');
-        }
-        async function deleteJobDesk(p,t) {
-            if(!confirm('Hapus?')) return;
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'manager_action', target: 'jobdesk', type: 'delete', data: {posisi:p, tugas:t} }) });
-            await loadData(); renderMgrJobDesk();
-        }
-        
-        function renderMgrHistory() {
-             const html = globalData.attendance.rows.slice().reverse().map(r => `
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="p-3 text-xs text-gray-500">${new Date(r[0]).toLocaleString('id-ID')}</td>
-                    <td class="p-3 font-bold text-sm text-gray-800">${r[1]}</td>
-                    <td class="p-3"><span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded font-bold">${r[3]}</span></td>
-                    <td class="p-3 text-xs text-gray-500">${r[4]}</td>
-                    <td class="p-3"><a href="${r[8]}" target="_blank" class="text-emerald-600 hover:underline text-xs font-bold flex items-center gap-1"><i data-lucide="external-link" width="12"></i> Bukti</a></td>
-                </tr>
-            `).join('');
-            document.getElementById('tableHistoryFull').innerHTML = html;
-            refreshIcons();
-        }
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                <h3 class="font-bold">Log Absensi Terkini</h3>
+                <button class="text-xs text-emerald-600 font-bold">Lihat Semua</button>
+            </div>
+            <div class="divide-y">
+                <div class="p-4 flex items-center gap-3">
+                    <img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full">
+                    <div>
+                        <p class="font-bold text-sm">Ilham Ali</p>
+                        <p class="text-xs text-gray-500">07:55 • Tepat Waktu</p>
+                    </div>
+                </div>
+                <div class="p-4 flex items-center gap-3">
+                    <img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full">
+                    <div>
+                        <p class="font-bold text-sm">Renita Aulia</p>
+                        <p class="text-xs text-gray-500">08:05 • <span class="text-orange-500">Terlambat</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <button onclick="Swal.fire('Fitur','Akan membuka modal edit karyawan','info')" class="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-md mb-3">
+            + Tambah Karyawan
+        </button>
+        <button onclick="Swal.fire('Fitur','Akan membuka modal buat jadwal','info')" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-md">
+            Atur Jadwal Shift
+        </button>
+    </div>
+
+    <!-- === BOTTOM NAVIGATION (Mobile Sticky) === -->
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around py-3 pb-safe z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button onclick="switchPage('home')" class="nav-btn flex flex-col items-center gap-1 text-emerald-600 w-1/4" id="btn-home">
+            <i data-lucide="home" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Beranda</span>
+        </button>
+        <button onclick="switchPage('tasks')" class="nav-btn flex flex-col items-center gap-1 text-gray-400 w-1/4" id="btn-tasks">
+            <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Tugas</span>
+        </button>
+        <button onclick="switchPage('schedule')" class="nav-btn flex flex-col items-center gap-1 text-gray-400 w-1/4" id="btn-schedule">
+            <i data-lucide="calendar" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Jadwal</span>
+        </button>
+        <button onclick="switchPage('profile')" class="nav-btn flex flex-col items-center gap-1 text-gray-400 w-1/4" id="btn-profile">
+            <i data-lucide="user" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Profil</span>
+        </button>
+    </div>
+
+    <!-- === CAMERA MODAL === -->
+    <div id="camera-ui" class="fixed inset-0 bg-black z-[60] hidden flex flex-col">
+        <video id="video" autoplay playsinline class="flex-1 object-cover w-full h-full transform scale-x-[-1]"></video>
+        <div class="absolute bottom-10 w-full flex justify-center items-center gap-8 pb-safe">
+            <button onclick="document.getElementById('camera-ui').classList.add('hidden')" class="text-white p-4"><i data-lucide="x" class="w-8 h-8"></i></button>
+            <button onclick="takePhoto()" class="w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-lg active:scale-90 transition"></button>
+            <button class="text-white p-4"><i data-lucide="refresh-cw" class="w-8 h-8"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // Init Icons
+        lucide.createIcons();
     </script>
 </body>
 </html>
