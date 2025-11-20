@@ -1,413 +1,132 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PayBoss HRIS Mobile</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- SweetAlert2 untuk Notifikasi Cantik -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+// ID Sheet Anda
+const SPREADSHEET_ID = '1ZQ1Tn-sOSgnTcmSpIzIl0lg7p_mwlc-43Ov2ThnTkeI';
+
+function doGet(e) {
+  const action = e.parameter.action;
+  if (action == 'getData') return getAllData();
+  return ContentService.createTextOutput("Server Ready");
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action;
     
-    <style>
-        /* Mobile Optimization */
-        body { -webkit-tap-highlight-color: transparent; }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
-</head>
-<body class="bg-gray-50 font-sans text-gray-800 select-none">
+    if (action == 'clockIn') return handleClockIn(data);
+    else if (action == 'clockOut') return handleClockOut(data);
+    else if (action == 'updateRoster') return handleUpdateRoster(data);
+    else if (action == 'permission') return handlePermission(data);
+    else if (action == 'manageEmployee') return handleManageEmployee(data);
+    
+    return responseJSON({ status: 'error', message: 'Unknown action' });
+  } catch (error) {
+    return responseJSON({ status: 'error', message: error.toString() });
+  }
+}
 
-    <!-- STATE MANAGER & LOGIC -->
-    <script>
-        // === KONFIGURASI TERBARU ===
-        // URL Web App Google Apps Script Anda
-        const API_URL = "https://script.google.com/macros/s/AKfycbwtZOLyC9HPsA8_SNRxfQwBhk2WvkAtZrOJMWTgKEnYicE6ooujaZqyNsuOwK6CHIFM4A/exec"; 
-        
-        // Koordinat Kantor & Radius (Meter)
-        const OFFICE_LOC = { lat: -2.171693116948542, lng: 115.40295890527945, radius: 200 };
+function getAllData() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  return responseJSON({
+    employees: mapEmployees(getSheetData(ss, 'Karyawan')),
+    roster: mapRoster(getSheetData(ss, 'Roster')),
+    jobDesk: mapJobDesk(getSheetData(ss, 'JobDesk')),
+    announcements: getSheetData(ss, 'Pengumuman'),
+    attendance: mapAttendance(getSheetData(ss, 'Absensi'))
+  });
+}
 
-        // Global State
-        let currentUser = null; // Data user login
-        let appData = { roster: [], tasks: [], attendance: [], announcements: [] };
-        
-        // --- Helper: Format Rupiah/Tanggal ---
-        const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
-        
-        // Hitung Jarak GPS (Haversine Formula)
-        const getDist = (lat1, lon1, lat2, lon2) => {
-            const R = 6371e3; 
-            const q = (lat2-lat1) * Math.PI/180;
-            const w = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(q/2)*Math.sin(q/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(w/2)*Math.sin(w/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        };
+function handleManageEmployee(data) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('Karyawan');
+  const subAction = data.subAction;
+  const emp = data.employee;
+  
+  const rowData = [
+    emp.id, emp.name, emp.position, emp.pass, emp.birthDate, emp.photo, 
+    emp.phone, emp.email, emp.address, emp.maritalStatus, emp.emergency, emp.initial, emp.joinDate
+  ];
 
-        // --- API CALLS ---
-        async function apiCall(action, payload = {}) {
-            Swal.fire({
-                title: 'Memuat...', 
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-            
-            try {
-                const form = new FormData();
-                form.append('action', action);
-                form.append('data', JSON.stringify(payload));
-                
-                const res = await fetch(API_URL, { method: 'POST', body: form });
-                const json = await res.json();
-                
-                Swal.close();
-                return json;
-            } catch (e) {
-                Swal.fire('Error', 'Gagal koneksi ke server Google Sheet', 'error');
-                console.error(e);
-                return null;
-            }
-        }
+  if (subAction === 'add') {
+    const ids = sheet.getRange(2, 1, sheet.getLastRow(), 1).getValues().flat();
+    if (ids.includes(emp.id)) return responseJSON({ status: 'error', message: 'ID Karyawan sudah ada!' });
+    sheet.appendRow(rowData);
+    return responseJSON({ status: 'success', message: 'Karyawan berhasil ditambahkan' });
+  } else if (subAction === 'edit') {
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] == emp.id) {
+        sheet.getRange(i + 1, 1, 1, rowData.length).setValues([rowData]);
+        return responseJSON({ status: 'success', message: 'Data karyawan diperbarui' });
+      }
+    }
+    return responseJSON({ status: 'error', message: 'Karyawan tidak ditemukan' });
+  } else if (subAction === 'delete') {
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] == emp.id) {
+        sheet.deleteRow(i + 1);
+        return responseJSON({ status: 'success', message: 'Karyawan dihapus' });
+      }
+    }
+  }
+  return responseJSON({ status: 'error', message: 'Aksi gagal' });
+}
 
-        // --- FUNGSI NAVIGASI ---
-        function switchPage(pageId) {
-            document.querySelectorAll('.page').forEach(el => el.classList.add('hidden'));
-            document.getElementById(pageId).classList.remove('hidden');
-            
-            // Update Bottom Nav Active State
-            document.querySelectorAll('.nav-btn').forEach(el => el.classList.replace('text-emerald-600', 'text-gray-400'));
-            const activeBtn = document.getElementById(`btn-${pageId}`);
-            if(activeBtn) activeBtn.classList.replace('text-gray-400', 'text-emerald-600');
-            
-            lucide.createIcons();
-        }
+function handleClockIn(data) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('Absensi');
+  sheet.appendRow([data.date, data.empId, data.clockIn, "", data.status, data.lat, data.lng]);
+  return responseJSON({ status: 'success', message: 'Clock In Berhasil' });
+}
 
-        // --- LOGIN LOGIC ---
-        async function handleLogin(e) {
-            e.preventDefault();
-            const id = document.getElementById('loginId').value;
-            const pass = document.getElementById('loginPass').value;
+function handleClockOut(data) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('Absensi');
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (formatDate(new Date(rows[i][0])) === data.date && rows[i][1] === data.empId) {
+      sheet.getRange(i + 1, 4).setValue(data.clockOut);
+      return responseJSON({ status: 'success', message: 'Clock Out Berhasil' });
+    }
+  }
+  return responseJSON({ status: 'error', message: 'Data tidak ditemukan' });
+}
 
-            if(!id || !pass) return Swal.fire('Gagal', 'ID dan Password harus diisi', 'warning');
+function handleUpdateRoster(data) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('Roster');
+  const values = sheet.getDataRange().getValues();
+  data.updates.forEach(u => {
+    let found = false;
+    for (let i = 1; i < values.length; i++) {
+      if (formatDate(new Date(values[i][1])) === u.date && values[i][2] === u.id) {
+        sheet.getRange(i + 1, 4).setValue(u.shift);
+        found = true; break;
+      }
+    }
+    if (!found) sheet.appendRow(['J'+Math.floor(Math.random()*1000), u.date, u.id, u.shift, u.start, u.end]);
+  });
+  return responseJSON({ status: 'success' });
+}
 
-            const res = await apiCall('login', { id, pass });
-            
-            if (res && res.status === 'success') {
-                currentUser = res.user;
-                renderProfile();
-                
-                if(currentUser.role === 'Manager') {
-                    switchPage('manager-dashboard');
-                } else {
-                    switchPage('home');
-                    initGPS(); // Mulai pelacakan GPS untuk karyawan
-                }
-            } else {
-                Swal.fire('Gagal', 'ID atau Password Salah', 'error');
-            }
-        }
+function handlePermission(data) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('Absensi');
+  sheet.appendRow([data.date, data.empId, "-", "-", `${data.type}: ${data.reason}`, "-", "-"]);
+  return responseJSON({ status: 'success', message: 'Pengajuan berhasil dikirim' });
+}
 
-        function handleLogout() {
-            currentUser = null;
-            location.reload();
-        }
-
-        // --- ABSENSI LOGIC ---
-        let currentCoords = null;
-        
-        function initGPS() {
-            if(!navigator.geolocation) {
-                document.getElementById('gpsStatus').innerHTML = '<span class="text-red-500">GPS Tidak Didukung</span>';
-                return;
-            }
-
-            navigator.geolocation.watchPosition(
-                pos => {
-                    currentCoords = pos.coords;
-                    
-                    // Hitung jarak
-                    const dist = getDist(pos.coords.latitude, pos.coords.longitude, OFFICE_LOC.lat, OFFICE_LOC.lng);
-                    const distEl = document.getElementById('distDisplay');
-                    const statusEl = document.getElementById('gpsStatus');
-                    const btnAbsen = document.getElementById('btnAbsenMasuk');
-                    
-                    if(distEl) distEl.innerText = Math.round(dist) + " meter";
-                    
-                    // Validasi Radius
-                    if(dist <= OFFICE_LOC.radius) {
-                        statusEl.innerHTML = `<span class="text-emerald-600 font-bold flex items-center gap-1"><i data-lucide="check-circle" class="w-4 h-4"></i> Dalam Lokasi</span>`;
-                        btnAbsen.disabled = false;
-                        btnAbsen.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                        btnAbsen.classList.add('bg-emerald-600', 'shadow-lg', 'animate-pulse');
-                        btnAbsen.innerText = "📸 AMBIL FOTO ABSEN";
-                    } else {
-                        statusEl.innerHTML = `<span class="text-red-500 font-bold flex items-center gap-1"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Terlalu Jauh</span>`;
-                        btnAbsen.disabled = true;
-                        btnAbsen.classList.add('bg-gray-400', 'cursor-not-allowed');
-                        btnAbsen.classList.remove('bg-emerald-600', 'shadow-lg', 'animate-pulse');
-                        btnAbsen.innerText = "🚫 DILUAR JANGKAUAN";
-                    }
-                    lucide.createIcons();
-                }, 
-                err => {
-                    console.error(err);
-                    document.getElementById('gpsStatus').innerText = "GPS Error: " + err.message;
-                }, 
-                { enableHighAccuracy: true, maximumAge: 0 }
-            );
-        }
-
-        // Kamera Logic
-        let videoStream = null;
-        async function openCamera() {
-            const video = document.getElementById('video');
-            document.getElementById('camera-ui').classList.remove('hidden');
-            try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = videoStream;
-            } catch (e) { Swal.fire('Error', 'Gagal akses kamera. Pastikan izin diberikan.', 'error'); }
-        }
-
-        function closeCamera() {
-            if(videoStream) {
-                videoStream.getTracks().forEach(t => t.stop());
-            }
-            document.getElementById('camera-ui').classList.add('hidden');
-        }
-
-        function takePhoto() {
-            const canvas = document.createElement('canvas');
-            const video = document.getElementById('video');
-            
-            // Set ukuran canvas sesuai video
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            // Draw image (Mirror effect fix)
-            const ctx = canvas.getContext('2d');
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(video, 0, 0);
-            
-            const base64 = canvas.toDataURL('image/jpeg', 0.7);
-            closeCamera();
-            submitAbsen(base64);
-        }
-
-        async function submitAbsen(photo) {
-            if(!currentCoords) return Swal.fire('GPS Error', 'Lokasi belum ditemukan. Tunggu sebentar.', 'warning');
-            
-            const payload = {
-                empId: currentUser.id,
-                lat: currentCoords.latitude,
-                lng: currentCoords.longitude,
-                photo: photo,
-                type: 'IN', // Default Absen Masuk
-                time: new Date().toLocaleString('id-ID')
-            };
-
-            const res = await apiCall('submit_attendance', payload);
-            
-            if(res && res.status === 'success') {
-                Swal.fire({
-                    title: 'Berhasil!',
-                    text: 'Absensi Anda telah tercatat.',
-                    icon: 'success'
-                });
-            } else {
-                Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan data.', 'error');
-            }
-        }
-
-        function renderProfile() {
-            document.getElementById('pName').innerText = currentUser.name;
-            document.getElementById('pRole').innerText = currentUser.role;
-            if(currentUser.photo) {
-                document.getElementById('pImg').src = currentUser.photo;
-            }
-        }
-
-    </script>
-
-    <!-- === HALAMAN LOGIN === -->
-    <div id="login" class="page min-h-screen flex items-center justify-center bg-gradient-to-b from-emerald-600 to-teal-800 p-6">
-        <div class="bg-white w-full max-w-sm p-8 rounded-2xl shadow-2xl animate-fade-in">
-            <div class="text-center mb-8">
-                <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-700 font-bold text-3xl border-4 border-emerald-50 shadow-inner">PB</div>
-                <h1 class="text-2xl font-bold text-gray-800">PayBoss HRIS</h1>
-                <p class="text-sm text-gray-400">Silakan login untuk melanjutkan</p>
-            </div>
-            <form onsubmit="handleLogin(event)" class="space-y-4">
-                <div>
-                    <label class="text-xs font-bold text-gray-500 ml-1">ID KARYAWAN</label>
-                    <input id="loginId" type="text" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50" placeholder="Contoh: PB251102">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-500 ml-1">PASSWORD</label>
-                    <input id="loginPass" type="password" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50" placeholder="********">
-                </div>
-                <button type="submit" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg transition transform active:scale-95">MASUK</button>
-            </form>
-            <div class="mt-4 text-center">
-                <p class="text-xs text-gray-400">Versi Mobile 2.0 • Connected</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- === HALAMAN EMPLOYEE HOME === -->
-    <div id="home" class="page hidden pb-24">
-        <!-- Header -->
-        <div class="bg-emerald-600 text-white p-6 pb-16 rounded-b-[2.5rem] shadow-lg relative z-10">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center gap-3">
-                    <img id="pImg" src="https://via.placeholder.com/50" class="w-12 h-12 rounded-full border-2 border-white bg-gray-200 object-cover">
-                    <div>
-                        <p class="text-emerald-100 text-xs mb-0.5">Halo,</p>
-                        <h2 id="pName" class="font-bold text-lg leading-none">Memuat...</h2>
-                        <span id="pRole" class="text-xs bg-emerald-700 px-2 py-0.5 rounded mt-1 inline-block">...</span>
-                    </div>
-                </div>
-                <button onclick="handleLogout()" class="bg-white/20 p-2 rounded-full hover:bg-white/30 backdrop-blur-sm"><i data-lucide="log-out" class="w-5 h-5"></i></button>
-            </div>
-        </div>
-
-        <!-- Stats Card Overlapping -->
-        <div class="px-5 -mt-10 relative z-20">
-            <div class="bg-white p-4 rounded-2xl shadow-lg flex justify-between items-center border border-gray-100">
-                <div class="text-center w-1/3 border-r">
-                    <p class="text-xs text-gray-400 mb-1">Hadir</p>
-                    <h3 class="text-xl font-bold text-emerald-600">-</h3>
-                </div>
-                <div class="text-center w-1/3 border-r">
-                    <p class="text-xs text-gray-400 mb-1">Terlambat</p>
-                    <h3 class="text-xl font-bold text-orange-500">-</h3>
-                </div>
-                <div class="text-center w-1/3">
-                    <p class="text-xs text-gray-400 mb-1">Jadwal</p>
-                    <h3 class="text-xl font-bold text-blue-600">Pagi</h3>
-                </div>
-            </div>
-        </div>
-
-        <!-- GPS & Absen Action -->
-        <div class="p-5 space-y-5">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="map-pin" class="w-5 h-5 text-emerald-600"></i> Status Lokasi</h3>
-                
-                <div class="bg-gray-50 rounded-xl p-3 mb-4">
-                    <div class="flex justify-between items-center mb-2">
-                         <span class="text-xs text-gray-500">Jarak Kantor</span>
-                         <span id="distDisplay" class="font-mono font-bold text-gray-800">Mencari...</span>
-                    </div>
-                    <div id="gpsStatus" class="text-sm text-center py-1 bg-white rounded border border-gray-200">
-                        <span class="animate-pulse text-gray-400">Menunggu sinyal GPS...</span>
-                    </div>
-                    <p class="text-[10px] text-gray-400 mt-2 text-center">*Pastikan GPS aktif & izinkan lokasi browser</p>
-                </div>
-                
-                <button id="btnAbsenMasuk" onclick="openCamera()" disabled class="w-full py-4 bg-gray-400 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition cursor-not-allowed">
-                    <i data-lucide="camera"></i> MENCARI LOKASI...
-                </button>
-            </div>
-
-            <!-- Shift Info -->
-            <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-5 rounded-2xl text-white shadow-md relative overflow-hidden">
-                <i data-lucide="clock" class="absolute right-[-10px] bottom-[-10px] w-32 h-32 text-white/10"></i>
-                <p class="text-blue-100 text-sm mb-1">Jadwal Hari Ini</p>
-                <h2 class="text-2xl font-bold mb-2">Shift Pagi</h2>
-                <div class="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg text-sm backdrop-blur-sm">
-                    <span>08:00 - 16:00</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- === HALAMAN TUGAS & PENGUMUMAN === -->
-    <div id="tasks" class="page hidden pb-24 p-5">
-        <h2 class="text-xl font-bold mb-4">Pengumuman & Tugas</h2>
-        
-        <!-- Pengumuman -->
-        <div class="space-y-3 mb-6">
-            <div class="bg-orange-50 border border-orange-100 p-4 rounded-xl">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="bg-orange-200 text-orange-800 text-[10px] font-bold px-2 py-0.5 rounded">PENTING</span>
-                    <span class="text-xs text-gray-400">Hari Ini</span>
-                </div>
-                <h3 class="font-bold text-gray-800">Cek Google Sheet</h3>
-                <p class="text-sm text-gray-600 mt-1">Data pengumuman akan diambil langsung dari sheet.</p>
-            </div>
-        </div>
-
-        <!-- Tugas Checklist -->
-        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="check-square"></i> Job Desk Harian</h3>
-        <div class="space-y-2">
-            <div class="text-center py-4 text-gray-400 text-sm italic">
-                Memuat tugas dari server...
-            </div>
-        </div>
-    </div>
-
-    <!-- === HALAMAN MANAGER (DASHBOARD) === -->
-    <div id="manager-dashboard" class="page hidden p-5 pb-24">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Dashboard Manager</h1>
-            <button onclick="handleLogout()" class="text-red-500"><i data-lucide="log-out"></i></button>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
-                <p class="text-xs text-gray-500">Karyawan</p>
-                <h3 class="text-2xl font-bold">Active</h3>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <p class="text-xs text-gray-500">Data</p>
-                <h3 class="text-2xl font-bold">Sync</h3>
-            </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-xl shadow-sm text-center">
-            <p class="text-gray-500 mb-4">Gunakan Google Sheet untuk mengelola data Karyawan, Jadwal, dan Tugas secara lengkap.</p>
-            <a href="https://docs.google.com/spreadsheets/d/1ZQ1Tn-sOSgnTcmSpIzIl0lg7p_mwlc-43Ov2ThnTkeI/edit" target="_blank" class="inline-block px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg font-bold text-sm">
-                Buka Google Sheet
-            </a>
-        </div>
-    </div>
-
-    <!-- === BOTTOM NAVIGATION (Mobile Sticky) === -->
-    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around py-3 pb-safe z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button onclick="switchPage('home')" class="nav-btn flex flex-col items-center gap-1 text-emerald-600 w-1/4" id="btn-home">
-            <i data-lucide="home" class="w-6 h-6"></i>
-            <span class="text-[10px] font-medium">Beranda</span>
-        </button>
-        <button onclick="switchPage('tasks')" class="nav-btn flex flex-col items-center gap-1 text-gray-400 w-1/4" id="btn-tasks">
-            <i data-lucide="clipboard-list" class="w-6 h-6"></i>
-            <span class="text-[10px] font-medium">Tugas</span>
-        </button>
-        <button onclick="switchPage('schedule')" class="nav-btn flex flex-col items-center gap-1 text-gray-400 w-1/4" id="btn-schedule">
-            <i data-lucide="calendar" class="w-6 h-6"></i>
-            <span class="text-[10px] font-medium">Jadwal</span>
-        </button>
-        <button onclick="switchPage('profile')" class="nav-btn flex flex-col items-center gap-1 text-gray-400 w-1/4" id="btn-profile">
-            <i data-lucide="user" class="w-6 h-6"></i>
-            <span class="text-[10px] font-medium">Profil</span>
-        </button>
-    </div>
-
-    <!-- === CAMERA MODAL === -->
-    <div id="camera-ui" class="fixed inset-0 bg-black z-[60] hidden flex flex-col">
-        <video id="video" autoplay playsinline class="flex-1 object-cover w-full h-full transform scale-x-[-1]"></video>
-        <div class="absolute bottom-10 w-full flex justify-center items-center gap-8 pb-safe">
-            <button onclick="closeCamera()" class="text-white p-4"><i data-lucide="x" class="w-8 h-8"></i></button>
-            <button onclick="takePhoto()" class="w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-lg active:scale-90 transition"></button>
-            <button class="text-white p-4 opacity-0"><i data-lucide="refresh-cw" class="w-8 h-8"></i></button>
-        </div>
-    </div>
-
-    <script>
-        // Init Icons
-        lucide.createIcons();
-    </script>
-</body>
-</html>
+function mapEmployees(rows) {
+  return rows.map(r => ({
+    id: r['ID_Karyawan'], name: r['Nama_Lengkap'], position: r['Posisi'], pass: r['password'],
+    birthDate: formatDate(r['Tanggal_Lahir']), photo: r['Foto_URL'], phone: r['No_Whatsapp'],
+    email: r['email'], address: r['Alamat'], maritalStatus: r['Status_Pernikahan'],
+    emergency: r['Kontak_Darurat'], initial: r['Foto_Inisial'], joinDate: formatDate(r['Tanggal_Bergabung'])
+  }));
+}
+function mapRoster(rows) { return rows.map(r => ({ id: r['ID_Karyawan'], date: formatDate(r['Tanggal']), shift: r['Nama_Shift'], start: r['Jam_Mulai'], end: r['Jam_Selesai'] })); }
+function mapJobDesk(rows) { return rows.map(r => ({ position: r['Posisi'], task: r['Tugas'], target: r['Target'] })); }
+function mapAttendance(rows) { return rows.map(r => ({ date: formatDate(r['Tanggal']), empId: r['ID_Karyawan'], clockIn: r['Clock_In'], clockOut: r['Clock_Out'], status: r['Status'], lat: r['Lat'], lng: r['Lng'] })); }
+function getSheetData(ss, name) { const s = ss.getSheetByName(name); return s ? s.getDataRange().getValues().slice(1).map(r => { const h = s.getDataRange().getValues()[0]; return h.reduce((o, k, i) => ({...o, [k]: r[i]}), {}); }) : []; }
+function responseJSON(data) { return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON); }
+function formatDate(d) { if(!d || d == '') return ''; try { return new Date(d).toISOString().split('T')[0]; } catch(e) { return ''; } }
