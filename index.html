@@ -23,9 +23,11 @@
 
     <!-- STATE MANAGER & LOGIC -->
     <script>
-        // === KONFIGURASI (GANTI URL INI NANTI SETELAH DEPLOY GAS) ===
+        // === KONFIGURASI TERBARU ===
+        // URL Web App Google Apps Script Anda
         const API_URL = "https://script.google.com/macros/s/AKfycbwtZOLyC9HPsA8_SNRxfQwBhk2WvkAtZrOJMWTgKEnYicE6ooujaZqyNsuOwK6CHIFM4A/exec"; 
         
+        // Koordinat Kantor & Radius (Meter)
         const OFFICE_LOC = { lat: -2.171693116948542, lng: 115.40295890527945, radius: 200 };
 
         // Global State
@@ -34,6 +36,8 @@
         
         // --- Helper: Format Rupiah/Tanggal ---
         const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
+        
+        // Hitung Jarak GPS (Haversine Formula)
         const getDist = (lat1, lon1, lat2, lon2) => {
             const R = 6371e3; 
             const q = (lat2-lat1) * Math.PI/180;
@@ -44,38 +48,27 @@
 
         // --- API CALLS ---
         async function apiCall(action, payload = {}) {
-            Swal.fire({title: 'Memuat...', didOpen: () => Swal.showLoading()});
+            Swal.fire({
+                title: 'Memuat...', 
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            
             try {
-                // Simulasi jika URL belum diset (Untuk demo tampilan)
-                if(API_URL === "https://script.google.com/macros/s/AKfycbwtZOLyC9HPsA8_SNRxfQwBhk2WvkAtZrOJMWTgKEnYicE6ooujaZqyNsuOwK6CHIFM4A/exec") {
-                    console.warn("API URL Belum Diset. Menggunakan Mock Data.");
-                    Swal.close();
-                    return mockResponse(action, payload);
-                }
-
                 const form = new FormData();
                 form.append('action', action);
                 form.append('data', JSON.stringify(payload));
                 
                 const res = await fetch(API_URL, { method: 'POST', body: form });
                 const json = await res.json();
+                
                 Swal.close();
                 return json;
             } catch (e) {
-                Swal.fire('Error', 'Gagal koneksi ke server', 'error');
+                Swal.fire('Error', 'Gagal koneksi ke server Google Sheet', 'error');
                 console.error(e);
                 return null;
             }
-        }
-
-        // --- MOCK RESPONSE (Hapus nanti jika sudah connect) ---
-        function mockResponse(action, p) {
-            if(action === 'login') {
-                if(p.id === 'PB251102') return { status: 'success', user: { id: 'PB251102', name: 'Ilham Ali', role: 'Pramusaji', photo: 'https://i.imgur.com/ijK3PRX.jpeg' }};
-                if(p.id === 'MANAGER') return { status: 'success', user: { id: 'MANAGER', name: 'Pak Boss', role: 'Manager' }};
-                return { status: 'fail' };
-            }
-            return { status: 'success' };
         }
 
         // --- FUNGSI NAVIGASI ---
@@ -97,15 +90,19 @@
             const id = document.getElementById('loginId').value;
             const pass = document.getElementById('loginPass').value;
 
+            if(!id || !pass) return Swal.fire('Gagal', 'ID dan Password harus diisi', 'warning');
+
             const res = await apiCall('login', { id, pass });
+            
             if (res && res.status === 'success') {
                 currentUser = res.user;
                 renderProfile();
+                
                 if(currentUser.role === 'Manager') {
                     switchPage('manager-dashboard');
                 } else {
                     switchPage('home');
-                    initGPS(); // Start GPS tracking for employee
+                    initGPS(); // Mulai pelacakan GPS untuk karyawan
                 }
             } else {
                 Swal.fire('Gagal', 'ID atau Password Salah', 'error');
@@ -119,29 +116,50 @@
 
         // --- ABSENSI LOGIC ---
         let currentCoords = null;
+        
         function initGPS() {
-            if(!navigator.geolocation) return;
-            navigator.geolocation.watchPosition(pos => {
-                currentCoords = pos.coords;
-                const dist = getDist(pos.coords.latitude, pos.coords.longitude, OFFICE_LOC.lat, OFFICE_LOC.lng);
-                const distEl = document.getElementById('distDisplay');
-                const statusEl = document.getElementById('gpsStatus');
-                
-                if(distEl) distEl.innerText = Math.round(dist) + " meter";
-                
-                if(dist <= OFFICE_LOC.radius) {
-                    statusEl.innerHTML = `<span class="text-emerald-600 font-bold flex items-center gap-1"><i data-lucide="check-circle"></i> Dalam Radius</span>`;
-                    document.getElementById('btnAbsenMasuk').disabled = false;
-                    document.getElementById('btnAbsenMasuk').classList.replace('bg-gray-400', 'bg-emerald-600');
-                } else {
-                    statusEl.innerHTML = `<span class="text-red-500 font-bold flex items-center gap-1"><i data-lucide="alert-triangle"></i> Luar Radius</span>`;
-                    // Disable button logic here if strict
-                }
-                lucide.createIcons();
-            }, err => console.log(err), { enableHighAccuracy: true });
+            if(!navigator.geolocation) {
+                document.getElementById('gpsStatus').innerHTML = '<span class="text-red-500">GPS Tidak Didukung</span>';
+                return;
+            }
+
+            navigator.geolocation.watchPosition(
+                pos => {
+                    currentCoords = pos.coords;
+                    
+                    // Hitung jarak
+                    const dist = getDist(pos.coords.latitude, pos.coords.longitude, OFFICE_LOC.lat, OFFICE_LOC.lng);
+                    const distEl = document.getElementById('distDisplay');
+                    const statusEl = document.getElementById('gpsStatus');
+                    const btnAbsen = document.getElementById('btnAbsenMasuk');
+                    
+                    if(distEl) distEl.innerText = Math.round(dist) + " meter";
+                    
+                    // Validasi Radius
+                    if(dist <= OFFICE_LOC.radius) {
+                        statusEl.innerHTML = `<span class="text-emerald-600 font-bold flex items-center gap-1"><i data-lucide="check-circle" class="w-4 h-4"></i> Dalam Lokasi</span>`;
+                        btnAbsen.disabled = false;
+                        btnAbsen.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                        btnAbsen.classList.add('bg-emerald-600', 'shadow-lg', 'animate-pulse');
+                        btnAbsen.innerText = "📸 AMBIL FOTO ABSEN";
+                    } else {
+                        statusEl.innerHTML = `<span class="text-red-500 font-bold flex items-center gap-1"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Terlalu Jauh</span>`;
+                        btnAbsen.disabled = true;
+                        btnAbsen.classList.add('bg-gray-400', 'cursor-not-allowed');
+                        btnAbsen.classList.remove('bg-emerald-600', 'shadow-lg', 'animate-pulse');
+                        btnAbsen.innerText = "🚫 DILUAR JANGKAUAN";
+                    }
+                    lucide.createIcons();
+                }, 
+                err => {
+                    console.error(err);
+                    document.getElementById('gpsStatus').innerText = "GPS Error: " + err.message;
+                }, 
+                { enableHighAccuracy: true, maximumAge: 0 }
+            );
         }
 
-        // Kamera
+        // Kamera Logic
         let videoStream = null;
         async function openCamera() {
             const video = document.getElementById('video');
@@ -149,43 +167,66 @@
             try {
                 videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
                 video.srcObject = videoStream;
-            } catch (e) { Swal.fire('Error', 'Gagal akses kamera', 'error'); }
+            } catch (e) { Swal.fire('Error', 'Gagal akses kamera. Pastikan izin diberikan.', 'error'); }
+        }
+
+        function closeCamera() {
+            if(videoStream) {
+                videoStream.getTracks().forEach(t => t.stop());
+            }
+            document.getElementById('camera-ui').classList.add('hidden');
         }
 
         function takePhoto() {
             const canvas = document.createElement('canvas');
             const video = document.getElementById('video');
-            canvas.width = 300; canvas.height = 300;
-            canvas.getContext('2d').drawImage(video, 0, 0, 300, 300);
+            
+            // Set ukuran canvas sesuai video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Draw image (Mirror effect fix)
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
+            
             const base64 = canvas.toDataURL('image/jpeg', 0.7);
-            
-            // Stop Camera
-            videoStream.getTracks().forEach(t => t.stop());
-            document.getElementById('camera-ui').classList.add('hidden');
-            
+            closeCamera();
             submitAbsen(base64);
         }
 
         async function submitAbsen(photo) {
-            if(!currentCoords) return Swal.fire('GPS Error', 'Lokasi belum ditemukan', 'warning');
+            if(!currentCoords) return Swal.fire('GPS Error', 'Lokasi belum ditemukan. Tunggu sebentar.', 'warning');
             
             const payload = {
                 empId: currentUser.id,
                 lat: currentCoords.latitude,
                 lng: currentCoords.longitude,
                 photo: photo,
-                type: 'IN', // Logic IN/OUT bisa ditambah nanti
-                time: new Date().toISOString()
+                type: 'IN', // Default Absen Masuk
+                time: new Date().toLocaleString('id-ID')
             };
 
-            await apiCall('submit_attendance', payload);
-            Swal.fire('Sukses', 'Absensi berhasil dikirim!', 'success');
+            const res = await apiCall('submit_attendance', payload);
+            
+            if(res && res.status === 'success') {
+                Swal.fire({
+                    title: 'Berhasil!',
+                    text: 'Absensi Anda telah tercatat.',
+                    icon: 'success'
+                });
+            } else {
+                Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan data.', 'error');
+            }
         }
 
         function renderProfile() {
             document.getElementById('pName').innerText = currentUser.name;
             document.getElementById('pRole').innerText = currentUser.role;
-            document.getElementById('pImg').src = currentUser.photo || 'https://via.placeholder.com/50';
+            if(currentUser.photo) {
+                document.getElementById('pImg').src = currentUser.photo;
+            }
         }
 
     </script>
@@ -209,20 +250,23 @@
                 </div>
                 <button type="submit" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg transition transform active:scale-95">MASUK</button>
             </form>
+            <div class="mt-4 text-center">
+                <p class="text-xs text-gray-400">Versi Mobile 2.0 • Connected</p>
+            </div>
         </div>
     </div>
 
     <!-- === HALAMAN EMPLOYEE HOME === -->
     <div id="home" class="page hidden pb-24">
         <!-- Header -->
-        <div class="bg-emerald-600 text-white p-6 pb-12 rounded-b-[2.5rem] shadow-lg relative z-10">
+        <div class="bg-emerald-600 text-white p-6 pb-16 rounded-b-[2.5rem] shadow-lg relative z-10">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-3">
-                    <img id="pImg" src="" class="w-12 h-12 rounded-full border-2 border-white bg-gray-200 object-cover">
+                    <img id="pImg" src="https://via.placeholder.com/50" class="w-12 h-12 rounded-full border-2 border-white bg-gray-200 object-cover">
                     <div>
-                        <p class="text-emerald-100 text-xs mb-0.5">Selamat Datang,</p>
-                        <h2 id="pName" class="font-bold text-lg leading-none">Nama Karyawan</h2>
-                        <span id="pRole" class="text-xs bg-emerald-700 px-2 py-0.5 rounded mt-1 inline-block">Posisi</span>
+                        <p class="text-emerald-100 text-xs mb-0.5">Halo,</p>
+                        <h2 id="pName" class="font-bold text-lg leading-none">Memuat...</h2>
+                        <span id="pRole" class="text-xs bg-emerald-700 px-2 py-0.5 rounded mt-1 inline-block">...</span>
                     </div>
                 </div>
                 <button onclick="handleLogout()" class="bg-white/20 p-2 rounded-full hover:bg-white/30 backdrop-blur-sm"><i data-lucide="log-out" class="w-5 h-5"></i></button>
@@ -230,19 +274,19 @@
         </div>
 
         <!-- Stats Card Overlapping -->
-        <div class="px-5 -mt-8 relative z-20">
-            <div class="bg-white p-4 rounded-2xl shadow-md flex justify-between items-center border border-gray-100">
+        <div class="px-5 -mt-10 relative z-20">
+            <div class="bg-white p-4 rounded-2xl shadow-lg flex justify-between items-center border border-gray-100">
                 <div class="text-center w-1/3 border-r">
                     <p class="text-xs text-gray-400 mb-1">Hadir</p>
-                    <h3 class="text-xl font-bold text-emerald-600">24</h3>
+                    <h3 class="text-xl font-bold text-emerald-600">-</h3>
                 </div>
                 <div class="text-center w-1/3 border-r">
                     <p class="text-xs text-gray-400 mb-1">Terlambat</p>
-                    <h3 class="text-xl font-bold text-orange-500">2</h3>
+                    <h3 class="text-xl font-bold text-orange-500">-</h3>
                 </div>
                 <div class="text-center w-1/3">
-                    <p class="text-xs text-gray-400 mb-1">Lembur</p>
-                    <h3 class="text-xl font-bold text-blue-600">4j</h3>
+                    <p class="text-xs text-gray-400 mb-1">Jadwal</p>
+                    <h3 class="text-xl font-bold text-blue-600">Pagi</h3>
                 </div>
             </div>
         </div>
@@ -251,18 +295,20 @@
         <div class="p-5 space-y-5">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="map-pin" class="w-5 h-5 text-emerald-600"></i> Status Lokasi</h3>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
-                    <div>
-                        <p class="text-xs text-gray-400">Jarak ke Kantor</p>
-                        <p id="distDisplay" class="font-mono font-bold text-lg">Mencari...</p>
+                
+                <div class="bg-gray-50 rounded-xl p-3 mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                         <span class="text-xs text-gray-500">Jarak Kantor</span>
+                         <span id="distDisplay" class="font-mono font-bold text-gray-800">Mencari...</span>
                     </div>
-                    <div id="gpsStatus" class="text-sm">
-                        <span class="animate-pulse text-gray-400">Mendeteksi GPS...</span>
+                    <div id="gpsStatus" class="text-sm text-center py-1 bg-white rounded border border-gray-200">
+                        <span class="animate-pulse text-gray-400">Menunggu sinyal GPS...</span>
                     </div>
+                    <p class="text-[10px] text-gray-400 mt-2 text-center">*Pastikan GPS aktif & izinkan lokasi browser</p>
                 </div>
                 
-                <button id="btnAbsenMasuk" onclick="openCamera()" disabled class="w-full mt-4 py-4 bg-gray-400 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition">
-                    <i data-lucide="camera"></i> ABSEN SEKARANG
+                <button id="btnAbsenMasuk" onclick="openCamera()" disabled class="w-full py-4 bg-gray-400 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition cursor-not-allowed">
+                    <i data-lucide="camera"></i> MENCARI LOKASI...
                 </button>
             </div>
 
@@ -287,25 +333,19 @@
             <div class="bg-orange-50 border border-orange-100 p-4 rounded-xl">
                 <div class="flex justify-between items-start mb-2">
                     <span class="bg-orange-200 text-orange-800 text-[10px] font-bold px-2 py-0.5 rounded">PENTING</span>
-                    <span class="text-xs text-gray-400">Hari Ini, 08:00</span>
+                    <span class="text-xs text-gray-400">Hari Ini</span>
                 </div>
-                <h3 class="font-bold text-gray-800">Meeting Bulanan</h3>
-                <p class="text-sm text-gray-600 mt-1">Seluruh staf wajib berkumpul di ruang meeting jam 14:00.</p>
+                <h3 class="font-bold text-gray-800">Cek Google Sheet</h3>
+                <p class="text-sm text-gray-600 mt-1">Data pengumuman akan diambil langsung dari sheet.</p>
             </div>
         </div>
 
         <!-- Tugas Checklist -->
         <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="check-square"></i> Job Desk Harian</h3>
         <div class="space-y-2">
-            <!-- Contoh Item Tugas -->
-            <label class="flex items-center p-4 bg-white border rounded-xl shadow-sm active:bg-gray-50 transition">
-                <input type="checkbox" class="w-5 h-5 text-emerald-600 rounded focus:ring-0 border-gray-300">
-                <span class="ml-3 text-sm font-medium text-gray-700">Membersihkan Area Bar</span>
-            </label>
-            <label class="flex items-center p-4 bg-white border rounded-xl shadow-sm active:bg-gray-50 transition">
-                <input type="checkbox" class="w-5 h-5 text-emerald-600 rounded focus:ring-0 border-gray-300">
-                <span class="ml-3 text-sm font-medium text-gray-700">Cek Stok Bahan Baku</span>
-            </label>
+            <div class="text-center py-4 text-gray-400 text-sm italic">
+                Memuat tugas dari server...
+            </div>
         </div>
     </div>
 
@@ -319,43 +359,20 @@
         <div class="grid grid-cols-2 gap-4 mb-6">
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
                 <p class="text-xs text-gray-500">Karyawan</p>
-                <h3 class="text-2xl font-bold">12</h3>
+                <h3 class="text-2xl font-bold">Active</h3>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <p class="text-xs text-gray-500">Hadir</p>
-                <h3 class="text-2xl font-bold">8</h3>
+                <p class="text-xs text-gray-500">Data</p>
+                <h3 class="text-2xl font-bold">Sync</h3>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-                <h3 class="font-bold">Log Absensi Terkini</h3>
-                <button class="text-xs text-emerald-600 font-bold">Lihat Semua</button>
-            </div>
-            <div class="divide-y">
-                <div class="p-4 flex items-center gap-3">
-                    <img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full">
-                    <div>
-                        <p class="font-bold text-sm">Ilham Ali</p>
-                        <p class="text-xs text-gray-500">07:55 • Tepat Waktu</p>
-                    </div>
-                </div>
-                <div class="p-4 flex items-center gap-3">
-                    <img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full">
-                    <div>
-                        <p class="font-bold text-sm">Renita Aulia</p>
-                        <p class="text-xs text-gray-500">08:05 • <span class="text-orange-500">Terlambat</span></p>
-                    </div>
-                </div>
-            </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm text-center">
+            <p class="text-gray-500 mb-4">Gunakan Google Sheet untuk mengelola data Karyawan, Jadwal, dan Tugas secara lengkap.</p>
+            <a href="https://docs.google.com/spreadsheets/d/1ZQ1Tn-sOSgnTcmSpIzIl0lg7p_mwlc-43Ov2ThnTkeI/edit" target="_blank" class="inline-block px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg font-bold text-sm">
+                Buka Google Sheet
+            </a>
         </div>
-
-        <button onclick="Swal.fire('Fitur','Akan membuka modal edit karyawan','info')" class="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-md mb-3">
-            + Tambah Karyawan
-        </button>
-        <button onclick="Swal.fire('Fitur','Akan membuka modal buat jadwal','info')" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-md">
-            Atur Jadwal Shift
-        </button>
     </div>
 
     <!-- === BOTTOM NAVIGATION (Mobile Sticky) === -->
@@ -382,9 +399,9 @@
     <div id="camera-ui" class="fixed inset-0 bg-black z-[60] hidden flex flex-col">
         <video id="video" autoplay playsinline class="flex-1 object-cover w-full h-full transform scale-x-[-1]"></video>
         <div class="absolute bottom-10 w-full flex justify-center items-center gap-8 pb-safe">
-            <button onclick="document.getElementById('camera-ui').classList.add('hidden')" class="text-white p-4"><i data-lucide="x" class="w-8 h-8"></i></button>
+            <button onclick="closeCamera()" class="text-white p-4"><i data-lucide="x" class="w-8 h-8"></i></button>
             <button onclick="takePhoto()" class="w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-lg active:scale-90 transition"></button>
-            <button class="text-white p-4"><i data-lucide="refresh-cw" class="w-8 h-8"></i></button>
+            <button class="text-white p-4 opacity-0"><i data-lucide="refresh-cw" class="w-8 h-8"></i></button>
         </div>
     </div>
 
