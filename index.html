@@ -1,132 +1,436 @@
-// ID Sheet Anda
-const SPREADSHEET_ID = '1ZQ1Tn-sOSgnTcmSpIzIl0lg7p_mwlc-43Ov2ThnTkeI';
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi GPS Cafe Payboss</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-function doGet(e) {
-  const action = e.parameter.action;
-  if (action == 'getData') return getAllData();
-  return ContentService.createTextOutput("Server Ready");
-}
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .bg-gradient-brand { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .bg-map-pattern { background-color: #e5e7eb; background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239ca3af' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
 
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const action = data.action;
-    
-    if (action == 'clockIn') return handleClockIn(data);
-    else if (action == 'clockOut') return handleClockOut(data);
-    else if (action == 'updateRoster') return handleUpdateRoster(data);
-    else if (action == 'permission') return handlePermission(data);
-    else if (action == 'manageEmployee') return handleManageEmployee(data);
-    
-    return responseJSON({ status: 'error', message: 'Unknown action' });
-  } catch (error) {
-    return responseJSON({ status: 'error', message: error.toString() });
-  }
-}
+    <div id="loading-overlay" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+        <p class="text-sm text-gray-500 font-medium animate-pulse">Menghubungkan ke Database...</p>
+    </div>
 
-function getAllData() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  return responseJSON({
-    employees: mapEmployees(getSheetData(ss, 'Karyawan')),
-    roster: mapRoster(getSheetData(ss, 'Roster')),
-    jobDesk: mapJobDesk(getSheetData(ss, 'JobDesk')),
-    announcements: getSheetData(ss, 'Pengumuman'),
-    attendance: mapAttendance(getSheetData(ss, 'Absensi'))
-  });
-}
+    <div id="app" class="flex-1 relative flex flex-col overflow-hidden h-full hidden"></div>
+    <div id="toast-container" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-[60] w-11/12 max-w-sm transition-all duration-300 pointer-events-none"></div>
 
-function handleManageEmployee(data) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Karyawan');
-  const subAction = data.subAction;
-  const emp = data.employee;
-  
-  const rowData = [
-    emp.id, emp.name, emp.position, emp.pass, emp.birthDate, emp.photo, 
-    emp.phone, emp.email, emp.address, emp.maritalStatus, emp.emergency, emp.initial, emp.joinDate
-  ];
+    <script>
+        // --- KONFIGURASI ---
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwtZOLyC9HPsA8_SNRxfQwBhk2WvkAtZrOJMWTgKEnYicE6ooujaZqyNsuOwK6CHIFM4A/exec';
+        const CAFE_CONFIG = { lat: -2.171698, lng: 115.402943, radius: 100, name: "Cafe Payboss" };
+        const EXTERNAL_LINKS = { stok: "https://paybosscafetanjung.github.io/Stok-Barang/", minuman: "https://paybosscafetanjung.github.io/Kalkulator-Minuman/" };
+        const SHIFT_TYPES = {
+            'Pagi': { label: 'Pagi', class: 'bg-yellow-100 text-yellow-700 border-yellow-200', time: '08:00 - 16:00' },
+            'Siang': { label: 'Siang', class: 'bg-blue-100 text-blue-700 border-blue-200', time: '16:00 - 00:00' },
+            'Malam': { label: 'Malam', class: 'bg-purple-100 text-purple-700 border-purple-200', time: '00:00 - 08:00' },
+            'Off': { label: 'Off', class: 'bg-gray-100 text-gray-400 border-gray-200', time: '-' }
+        };
 
-  if (subAction === 'add') {
-    const ids = sheet.getRange(2, 1, sheet.getLastRow(), 1).getValues().flat();
-    if (ids.includes(emp.id)) return responseJSON({ status: 'error', message: 'ID Karyawan sudah ada!' });
-    sheet.appendRow(rowData);
-    return responseJSON({ status: 'success', message: 'Karyawan berhasil ditambahkan' });
-  } else if (subAction === 'edit') {
-    const rows = sheet.getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      if (rows[i][0] == emp.id) {
-        sheet.getRange(i + 1, 1, 1, rowData.length).setValues([rowData]);
-        return responseJSON({ status: 'success', message: 'Data karyawan diperbarui' });
-      }
-    }
-    return responseJSON({ status: 'error', message: 'Karyawan tidak ditemukan' });
-  } else if (subAction === 'delete') {
-    const rows = sheet.getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      if (rows[i][0] == emp.id) {
-        sheet.deleteRow(i + 1);
-        return responseJSON({ status: 'success', message: 'Karyawan dihapus' });
-      }
-    }
-  }
-  return responseJSON({ status: 'error', message: 'Aksi gagal' });
-}
+        // --- STATE ---
+        let mockDatabase = { employees: [], roster: [], announcements: [], attendance: [], jobDesk: [], checklists: [] };
+        const state = {
+            user: null, view: 'login', empTab: 'home', mgrTab: 'dashboard',
+            gps: { valid: false, lat: 0, lng: 0, dist: 0, status: 'checking' },
+            isClockPageOpen: false, isPermissionPageOpen: false,
+            checklists: [], rosterStartDate: new Date(), cameraStream: null, pendingRosterChanges: [],
+            editingEmployee: null, isEmployeeModalOpen: false, isDetailModalOpen: false,
+            selectedJobDeskPos: 'Barista' // Untuk filter JobDesk Manager
+        };
 
-function handleClockIn(data) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Absensi');
-  sheet.appendRow([data.date, data.empId, data.clockIn, "", data.status, data.lat, data.lng]);
-  return responseJSON({ status: 'success', message: 'Clock In Berhasil' });
-}
+        // --- INIT ---
+        async function initApp() {
+            try {
+                const response = await fetch(`${API_URL}?action=getData`);
+                const data = await response.json();
+                mockDatabase = data;
+                // Load checklist data into local state for employee view
+                const today = new Date().toISOString().split('T')[0];
+                if(state.user?.role === 'employee') {
+                    state.checklists = data.checklists
+                        .filter(c => c.Tanggal == today && c.ID_Karyawan == state.user.id)
+                        .map(c => `${today}_${c.ID_Karyawan}_${c.Index_Tugas}`); 
+                }
+                document.getElementById('loading-overlay').classList.add('opacity-0');
+                setTimeout(() => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('app').classList.remove('hidden');
+                    render();
+                }, 500);
+            } catch (error) { alert("Gagal mengambil data."); }
+        }
 
-function handleClockOut(data) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Absensi');
-  const rows = sheet.getDataRange().getValues();
-  for (let i = 1; i < rows.length; i++) {
-    if (formatDate(new Date(rows[i][0])) === data.date && rows[i][1] === data.empId) {
-      sheet.getRange(i + 1, 4).setValue(data.clockOut);
-      return responseJSON({ status: 'success', message: 'Clock Out Berhasil' });
-    }
-  }
-  return responseJSON({ status: 'error', message: 'Data tidak ditemukan' });
-}
+        // --- API CALLS ---
+        async function postData(action, payload) {
+            showToast("Memproses...", "info", false);
+            try {
+                await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...payload }) });
+                // Optimistic Updates
+                const today = payload.date || new Date().toISOString().split('T')[0];
+                
+                if (action === 'clockIn') { mockDatabase.attendance.push({ date: today, empId: payload.empId, clockIn: payload.clockIn, clockOut: null, status: payload.status }); closeClockPage(); }
+                else if (action === 'clockOut') { const rec = mockDatabase.attendance.find(r => r.empId === payload.empId && r.date === today); if(rec) rec.clockOut = payload.clockOut; closeClockPage(); }
+                else if (action === 'permission') { mockDatabase.attendance.push({ date: today, empId: payload.empId, clockIn: "-", status: `${payload.type}: ${payload.reason}` }); closePermissionPage(); }
+                else if (action === 'manageEmployee' || action === 'manageJobDesk' || action === 'manageAnnouncement') { await initApp(); closeEmployeeModals(); }
+                
+                render();
+                showToast("Berhasil!", "success");
+            } catch (error) { showToast("Gagal menyimpan.", "error"); }
+        }
 
-function handleUpdateRoster(data) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Roster');
-  const values = sheet.getDataRange().getValues();
-  data.updates.forEach(u => {
-    let found = false;
-    for (let i = 1; i < values.length; i++) {
-      if (formatDate(new Date(values[i][1])) === u.date && values[i][2] === u.id) {
-        sheet.getRange(i + 1, 4).setValue(u.shift);
-        found = true; break;
-      }
-    }
-    if (!found) sheet.appendRow(['J'+Math.floor(Math.random()*1000), u.date, u.id, u.shift, u.start, u.end]);
-  });
-  return responseJSON({ status: 'success' });
-}
+        // --- CORE FUNCTIONS ---
+        function login(id, pass, role) {
+            if (role === 'manager' && id === 'admin' && pass === 'admin123') {
+                state.user = { name: 'Administrator', role: 'manager' };
+                state.view = 'manager'; render();
+            } else if (role === 'employee') {
+                const emp = mockDatabase.employees.find(e => e.id == id && e.pass == pass);
+                if (emp) { state.user = { ...emp, role: 'employee' }; state.view = 'employee'; render(); initGPS(); } 
+                else { showToast('ID/Pass Salah', 'error'); }
+            }
+        }
+        function logout() { state.user = null; state.view = 'login'; state.empTab = 'home'; state.mgrTab = 'dashboard'; render(); }
 
-function handlePermission(data) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Absensi');
-  sheet.appendRow([data.date, data.empId, "-", "-", `${data.type}: ${data.reason}`, "-", "-"]);
-  return responseJSON({ status: 'success', message: 'Pengajuan berhasil dikirim' });
-}
+        // --- RENDERERS ---
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = '';
+            if (state.view === 'login') app.innerHTML = renderLogin();
+            else if (state.view === 'manager') renderManagerLayout(app);
+            else if (state.view === 'employee') renderEmployeeLayout(app);
+        }
+        function renderLogin() { return `<div class="flex flex-col justify-center h-full p-8 bg-gradient-brand text-white relative"><div class="z-10 text-center mb-10"><h1 class="text-3xl font-bold">GPS Absensi</h1><p class="text-blue-100">Cafe Payboss</p></div><div class="bg-white rounded-3xl shadow-2xl p-6 text-gray-800"><div class="flex bg-gray-100 rounded-xl p-1 mb-6"><button onclick="toggleLoginRole('employee')" id="role-emp" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow text-indigo-600">Karyawan</button><button onclick="toggleLoginRole('manager')" id="role-mgr" class="flex-1 py-2 text-sm font-bold rounded-lg text-gray-500">Manager</button></div><form onsubmit="event.preventDefault(); login(this.id.value, this.pass.value, window.currentRole || 'employee')" class="space-y-4"><input name="id" type="text" class="w-full bg-gray-50 rounded-xl px-4 py-3 border" placeholder="ID Pengguna"><input name="pass" type="password" class="w-full bg-gray-50 rounded-xl px-4 py-3 border" placeholder="Password"><button class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg">MASUK</button></form></div></div>`; }
 
-function mapEmployees(rows) {
-  return rows.map(r => ({
-    id: r['ID_Karyawan'], name: r['Nama_Lengkap'], position: r['Posisi'], pass: r['password'],
-    birthDate: formatDate(r['Tanggal_Lahir']), photo: r['Foto_URL'], phone: r['No_Whatsapp'],
-    email: r['email'], address: r['Alamat'], maritalStatus: r['Status_Pernikahan'],
-    emergency: r['Kontak_Darurat'], initial: r['Foto_Inisial'], joinDate: formatDate(r['Tanggal_Bergabung'])
-  }));
-}
-function mapRoster(rows) { return rows.map(r => ({ id: r['ID_Karyawan'], date: formatDate(r['Tanggal']), shift: r['Nama_Shift'], start: r['Jam_Mulai'], end: r['Jam_Selesai'] })); }
-function mapJobDesk(rows) { return rows.map(r => ({ position: r['Posisi'], task: r['Tugas'], target: r['Target'] })); }
-function mapAttendance(rows) { return rows.map(r => ({ date: formatDate(r['Tanggal']), empId: r['ID_Karyawan'], clockIn: r['Clock_In'], clockOut: r['Clock_Out'], status: r['Status'], lat: r['Lat'], lng: r['Lng'] })); }
-function getSheetData(ss, name) { const s = ss.getSheetByName(name); return s ? s.getDataRange().getValues().slice(1).map(r => { const h = s.getDataRange().getValues()[0]; return h.reduce((o, k, i) => ({...o, [k]: r[i]}), {}); }) : []; }
-function responseJSON(data) { return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON); }
-function formatDate(d) { if(!d || d == '') return ''; try { return new Date(d).toISOString().split('T')[0]; } catch(e) { return ''; } }
+        // --- MANAGER LAYOUT & VIEWS ---
+        function renderManagerLayout(container) {
+            const content = document.createElement('div');
+            content.className = "flex-1 overflow-y-auto pb-24 bg-gray-50 relative";
+            
+            if (state.mgrTab === 'dashboard') content.innerHTML = renderManagerHome();
+            else if (state.mgrTab === 'jobdesk') content.innerHTML = renderManagerJobDesk();
+            else if (state.mgrTab === 'announcement') content.innerHTML = renderManagerAnnouncements();
+            else if (state.mgrTab === 'employees') content.innerHTML = renderManagerEmployees();
+            else if (state.mgrTab === 'profile') content.innerHTML = renderEmpProfile(); // Reuse
+
+            if (state.isEmployeeModalOpen) content.appendChild(renderEmployeeFormModal());
+            if (state.isDetailModalOpen) content.appendChild(renderEmployeeDetailModal());
+
+            const nav = document.createElement('div');
+            nav.className = "fixed bottom-0 w-full bg-white border-t pb-safe pt-2 px-4 shadow z-40 flex justify-between h-16 items-center text-[9px] font-medium text-gray-400";
+            nav.innerHTML = `
+                <button onclick="setMgrTab('dashboard')" class="flex flex-col items-center gap-1 ${state.mgrTab==='dashboard'?'text-indigo-600':''}"><i class="fa-solid fa-chart-pie text-lg"></i>Panel</button>
+                <button onclick="setMgrTab('jobdesk')" class="flex flex-col items-center gap-1 ${state.mgrTab==='jobdesk'?'text-indigo-600':''}"><i class="fa-solid fa-list-check text-lg"></i>JobDesk</button>
+                <button onclick="setMgrTab('announcement')" class="flex flex-col items-center gap-1 ${state.mgrTab==='announcement'?'text-indigo-600':''}"><i class="fa-solid fa-bullhorn text-lg"></i>Info</button>
+                <button onclick="setMgrTab('employees')" class="flex flex-col items-center gap-1 ${state.mgrTab==='employees'?'text-indigo-600':''}"><i class="fa-solid fa-users text-lg"></i>Tim</button>
+                <button onclick="setMgrTab('profile')" class="flex flex-col items-center gap-1 ${state.mgrTab==='profile'?'text-indigo-600':''}"><i class="fa-solid fa-user text-lg"></i>Akun</button>
+            `;
+            container.append(content, nav);
+        }
+
+        function renderManagerHome() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayAtt = mockDatabase.attendance.filter(a => a.date === todayStr);
+            const totalEmp = mockDatabase.employees.length;
+            const hadir = todayAtt.length;
+            const telat = todayAtt.filter(a => a.status === 'Terlambat').length;
+
+            return `
+                <div class="bg-gradient-brand pt-8 pb-20 px-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden">
+                     <div class="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div><p class="text-indigo-100 text-sm font-medium mb-1">Panel Manager</p><h2 class="text-2xl font-bold text-white">Ringkasan Hari Ini</h2></div>
+                        <button onclick="logout()" class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white backdrop-blur-sm border border-white/30"><i class="fa-solid fa-power-off"></i></button>
+                    </div>
+                </div>
+
+                <div class="px-6 -mt-12 relative z-20 space-y-6">
+                    <!-- Overview Stats -->
+                    <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex justify-between items-center">
+                        <div class="text-center"><p class="text-2xl font-bold text-gray-800">${totalEmp}</p><p class="text-[10px] text-gray-400 uppercase">Karyawan</p></div>
+                        <div class="w-px h-10 bg-gray-100"></div>
+                        <div class="text-center"><p class="text-2xl font-bold text-green-600">${hadir}</p><p class="text-[10px] text-gray-400 uppercase">Hadir</p></div>
+                        <div class="w-px h-10 bg-gray-100"></div>
+                        <div class="text-center"><p class="text-2xl font-bold text-orange-500">${telat}</p><p class="text-[10px] text-gray-400 uppercase">Telat</p></div>
+                    </div>
+
+                    <!-- Attendance Report List -->
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Laporan Kehadiran</h3>
+                        <div class="space-y-2">
+                            ${mockDatabase.employees.map(emp => {
+                                const att = todayAtt.find(a => a.empId === emp.id);
+                                const status = att ? att.status : 'Belum Absen';
+                                const color = att ? (att.status==='Terlambat'?'bg-orange-100 text-orange-600':'bg-green-100 text-green-600') : 'bg-gray-100 text-gray-400';
+                                return `
+                                <div class="bg-white p-3 rounded-xl border border-gray-50 flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img src="${emp.photo}" class="w-8 h-8 rounded-full object-cover bg-gray-200">
+                                        <div><p class="text-xs font-bold text-gray-700">${emp.name}</p><p class="text-[10px] text-gray-400">${att ? att.clockIn : '--:--'}</p></div>
+                                    </div>
+                                    <span class="text-[10px] font-bold px-2 py-1 rounded ${color}">${status}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Job Desk Progress -->
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Progress Job Desk</h3>
+                        <div class="space-y-3">
+                             ${mockDatabase.employees.map(emp => {
+                                // Hitung progress dummy (karena data checklist kompleks, kita simulasi atau hitung jika ada)
+                                let myTasks = mockDatabase.jobDesk.filter(j => emp.position.includes(j.position));
+                                if(myTasks.length === 0) return ''; // Skip if no tasks
+                                const done = mockDatabase.checklists.filter(c => c.ID_Karyawan === emp.id && c.Tanggal === todayStr).length;
+                                const total = myTasks.length;
+                                const percent = total > 0 ? Math.round((done/total)*100) : 0;
+                                
+                                return `
+                                <div class="bg-white p-4 rounded-2xl border border-gray-50">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="text-xs font-bold text-gray-700">${emp.name}</span>
+                                        <span class="text-xs font-bold text-indigo-600">${percent}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-indigo-600 h-1.5 rounded-full" style="width: ${percent}%"></div></div>
+                                </div>`;
+                             }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderManagerJobDesk() {
+            const positions = [...new Set(mockDatabase.jobDesk.map(j => j.position))];
+            const currentTasks = mockDatabase.jobDesk.filter(j => j.position === state.selectedJobDeskPos);
+
+            return `
+                <div class="bg-white pt-8 pb-4 px-6 shadow-sm sticky top-0 z-30">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Kelola Job Desk</h2>
+                    <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
+                        ${['Barista','Pramusaji','Kasir','Chef','Bartender'].map(p => `
+                            <button onclick="state.selectedJobDeskPos='${p}'; render()" class="px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${state.selectedJobDeskPos===p ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 text-gray-500'}">${p}</button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 space-y-4">
+                    <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                        <h3 class="font-bold text-indigo-700 text-sm mb-3">Tambah Tugas Baru</h3>
+                        <form onsubmit="event.preventDefault(); addJobDesk(this)" class="space-y-2">
+                            <input type="hidden" name="position" value="${state.selectedJobDeskPos}">
+                            <input name="task" class="w-full p-2 rounded-lg text-xs border" placeholder="Nama Tugas" required>
+                            <input name="target" class="w-full p-2 rounded-lg text-xs border" placeholder="Target / SOP" required>
+                            <button class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-bold">Simpan Tugas</button>
+                        </form>
+                    </div>
+
+                    <div class="space-y-2">
+                        ${currentTasks.map(t => `
+                            <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-start shadow-sm">
+                                <div>
+                                    <h4 class="text-xs font-bold text-gray-800">${t.task}</h4>
+                                    <p class="text-[10px] text-gray-500 mt-0.5"><i class="fa-solid fa-bullseye text-indigo-400"></i> ${t.target}</p>
+                                </div>
+                                <button onclick="deleteJobDesk('${t.position}', '${t.task}')" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                            </div>
+                        `).join('')}
+                        ${currentTasks.length===0 ? '<p class="text-center text-xs text-gray-400 py-4">Belum ada tugas.</p>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderManagerAnnouncements() {
+            return `
+                <div class="bg-white pt-8 pb-4 px-6 shadow-sm sticky top-0 z-30">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Buat Pengumuman</h2>
+                    <p class="text-xs text-gray-500">Kirim info ke karyawan</p>
+                </div>
+
+                <div class="px-6 py-4 space-y-6">
+                    <form onsubmit="event.preventDefault(); addAnnouncement(this)" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                        <div><label class="text-xs font-bold text-gray-500">Judul</label><input name="title" class="w-full p-2 rounded-lg border text-sm" required></div>
+                        <div><label class="text-xs font-bold text-gray-500">Pesan</label><textarea name="message" rows="3" class="w-full p-2 rounded-lg border text-sm" required></textarea></div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-500">Target</label>
+                            <select name="target" class="w-full p-2 rounded-lg border text-sm">
+                                <option value="Semua">Semua Karyawan</option>
+                                ${mockDatabase.employees.map(e => `<option value="${e.id}">${e.name} (${e.position})</option>`).join('')}
+                            </select>
+                        </div>
+                        <button class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-bold shadow">Kirim Pengumuman</button>
+                    </form>
+
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-3 text-sm">Riwayat Pengumuman</h3>
+                        <div class="space-y-3">
+                            ${mockDatabase.announcements.map(a => `
+                                <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    <div class="flex justify-between mb-1">
+                                        <h4 class="text-xs font-bold text-gray-800">${a.Judul||a.title}</h4>
+                                        <span class="text-[9px] text-gray-400">${a.Timestamp ? new Date(a.Timestamp).toLocaleDateString() : a.date}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-1">${a.Pesan||a.message}</p>
+                                    <span class="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded">Ke: ${a.Target_Shift||a.target||'Semua'}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderManagerEmployees() { return `<div class="bg-white pt-8 pb-4 px-6 shadow-sm sticky top-0 z-30"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-gray-800">Data Karyawan</h2><button onclick="openAddEmployeeModal()" class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg text-sm"><i class="fa-solid fa-plus"></i></button></div><input type="text" placeholder="Cari nama..." onkeyup="filterEmployees(this.value)" class="w-full bg-gray-100 rounded-xl py-2 px-4 text-sm outline-none"></div><div class="px-6 py-4 space-y-3" id="employee-list">${mockDatabase.employees.map(e => `<div class="bg-white p-4 rounded-2xl shadow-sm border flex items-center gap-4 group"><img src="${e.photo||'https://via.placeholder.com/150'}" class="w-12 h-12 rounded-xl object-cover bg-gray-100"><div class="flex-1 cursor-pointer" onclick="viewEmployeeDetail('${e.id}')"><h4 class="font-bold text-sm">${e.name}</h4><p class="text-xs text-gray-500">${e.position}</p></div><div class="flex gap-2"><button onclick="editEmployee('${e.id}')" class="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button><button onclick="deleteEmployee('${e.id}')" class="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button></div></div>`).join('')}</div>`; }
+
+        // --- EMPLOYEE DASHBOARD (FULL) ---
+        function renderEmpHome() {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            const roster = mockDatabase.roster.find(x => x.id == state.user.id && x.date == todayStr);
+            const att = mockDatabase.attendance.find(x => x.empId == state.user.id && x.date == todayStr);
+            
+            // Filter JobDesk
+            let myTasks = mockDatabase.jobDesk.filter(j => state.user.position.includes(j.position));
+            if(myTasks.length === 0) myTasks = mockDatabase.jobDesk.filter(j => j.position === 'Pramusaji'); // Fallback
+
+            const totalTasks = myTasks.length;
+            // Hitung doneTasks dari state.checklists yang sinkron dengan DB
+            // Format checklist key: YYYY-MM-DD_EmpID_TaskIndex
+            // Kita perlu logika index yg konsisten. Disini kita pakai index array myTasks sementara.
+            const doneTasks = myTasks.filter((_, i) => state.checklists.includes(`${todayStr}_${state.user.id}_${i}`)).length;
+            const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+            const weekDates = Array.from({length: 7}, (_, i) => { const d = new Date(); d.setDate(today.getDate() + i); return d; });
+
+            return `
+                <div class="bg-gradient-brand pt-8 pb-20 px-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden">
+                    <div class="relative z-10 text-white">
+                        <p class="text-indigo-100 text-sm font-medium mb-1">Halo,</p>
+                        <h2 class="text-2xl font-bold">${state.user.name.split(' ')[0]} 👋</h2>
+                        <span class="inline-block bg-white/20 px-3 py-1 rounded-full text-xs mt-2">${state.user.position}</span>
+                    </div>
+                    <div class="absolute right-6 top-8 w-12 h-12 rounded-full border-2 border-white/30 p-0.5 bg-white/10"><img src="${state.user.photo}" class="w-full h-full rounded-full object-cover"></div>
+                </div>
+                
+                <div class="px-6 -mt-12 relative z-20 space-y-6">
+                    <!-- Shift Hari Ini -->
+                    <div class="bg-white rounded-2xl p-5 shadow-xl border border-gray-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <div><p class="text-xs text-gray-400 font-bold uppercase">Shift Hari Ini</p><h3 class="text-lg font-bold text-gray-800">${roster ? roster.shift : 'Libur'}</h3></div>
+                            <div class="text-right"><p class="text-xs text-gray-400 font-bold uppercase">Jam Kerja</p><h3 class="text-lg font-bold text-indigo-600">${roster && roster.start ? `${roster.start}-${roster.end}` : '-'}</h3></div>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden"><div class="bg-indigo-500 h-2 rounded-full" style="width: ${att ? (att.clockOut ? '100%' : '50%') : '0%'}"></div></div>
+                        <div class="flex justify-between mt-2 text-[10px] text-gray-500"><span>Masuk: ${att?.clockIn || '-'}</span><span>Pulang: ${att?.clockOut || '-'}</span></div>
+                    </div>
+
+                    <!-- Roster 1 Minggu -->
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Jadwal Minggu Ini</h3>
+                        <div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+                            ${weekDates.map(d => {
+                                const dStr = d.toISOString().split('T')[0];
+                                const r = mockDatabase.roster.find(x => x.id == state.user.id && x.date == dStr);
+                                const shift = r ? r.shift : 'Off';
+                                const color = shift === 'Pagi' ? 'bg-yellow-100 text-yellow-700' : shift === 'Siang' ? 'bg-blue-100 text-blue-700' : shift === 'Malam' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400';
+                                const isToday = dStr === todayStr;
+                                return `<div class="flex-shrink-0 w-16 bg-white rounded-xl p-2 text-center border ${isToday ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-100'} shadow-sm"><p class="text-[10px] uppercase text-gray-400 font-bold mb-1">${d.toLocaleDateString('id-ID', {weekday:'short'})}</p><p class="text-lg font-bold text-gray-800 mb-2">${d.getDate()}</p><span class="block text-[9px] py-1 rounded font-bold ${color}">${shift}</span></div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Job Desk -->
+                    <div>
+                        <div class="flex justify-between items-end mb-3"><h3 class="font-bold text-gray-800 text-sm uppercase">Job Desk</h3><span class="text-xs font-bold text-indigo-600">${progress}% Selesai</span></div>
+                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
+                            <div class="w-full bg-gray-100 rounded-full h-2 mb-4"><div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width: ${progress}%"></div></div>
+                            ${myTasks.length > 0 ? myTasks.map((t, i) => {
+                                const checked = state.checklists.includes(`${todayStr}_${state.user.id}_${i}`);
+                                return `<label class="flex gap-3 cursor-pointer group"><input type="checkbox" onchange="toggleTask(${i})" class="peer h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" ${checked ? 'checked' : ''}><div class="flex-1"><h4 class="text-sm font-bold text-gray-700 peer-checked:line-through peer-checked:text-gray-400 transition-colors">${t.task}</h4><p class="text-[10px] text-gray-400">${t.target}</p></div></label>`;
+                            }).join('') : '<p class="text-xs text-gray-400">Tidak ada tugas.</p>'}
+                        </div>
+                    </div>
+
+                    <!-- Menu Akses Cepat -->
+                    <div class="pb-6">
+                        <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Menu Cepat</h3>
+                        <div class="grid grid-cols-4 gap-4">
+                            <button onclick="openClockPage()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 text-xl shadow-sm"><i class="fa-solid fa-camera"></i></div><span class="text-xs text-gray-600">Absen</span></button>
+                            <button onclick="openPermissionPage()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 text-xl shadow-sm"><i class="fa-solid fa-umbrella-beach"></i></div><span class="text-xs text-gray-600">Izin</span></button>
+                            <a href="${EXTERNAL_LINKS.stok}" target="_blank" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-600 text-xl shadow-sm"><i class="fa-solid fa-box"></i></div><span class="text-xs text-gray-600">Stok</span></a>
+                            <a href="${EXTERNAL_LINKS.minuman}" target="_blank" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-yellow-50 rounded-2xl flex items-center justify-center text-yellow-600 text-xl shadow-sm"><i class="fa-solid fa-mug-hot"></i></div><span class="text-xs text-gray-600">Jual</span></a>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // --- MANAGER LOGIC ---
+        function addJobDesk(form) {
+            const data = Object.fromEntries(new FormData(form).entries());
+            postData('manageJobDesk', { subAction: 'add', ...data });
+            form.reset();
+        }
+        function deleteJobDesk(pos, task) {
+            if(confirm("Hapus tugas ini?")) postData('manageJobDesk', { subAction: 'delete', position: pos, task: task });
+        }
+        function addAnnouncement(form) {
+            const data = Object.fromEntries(new FormData(form).entries());
+            postData('manageAnnouncement', { subAction: 'add', ...data });
+            form.reset();
+        }
+
+        // --- HELPERS & CORE (Same as before) ---
+        function toggleLoginRole(r){window.currentRole=r; document.getElementById('role-emp').className=`flex-1 py-2 text-sm font-bold rounded-lg shadow transition ${r=='employee'?'bg-white text-indigo-600':'text-gray-500'}`; document.getElementById('role-mgr').className=`flex-1 py-2 text-sm font-bold rounded-lg shadow transition ${r=='manager'?'bg-white text-indigo-600':'text-gray-500'}`;}
+        function setMgrTab(t){state.mgrTab=t;render();} function setEmpTab(t){state.empTab=t;render();}
+        function openClockPage(){state.isClockPageOpen=true;render();updateUIOnGPSChange();setTimeout(startCamera,500);} function closeClockPage(){stopCamera();state.isClockPageOpen=false;render();}
+        function openPermissionPage(){state.isPermissionPageOpen=true;render();} function closePermissionPage(){state.isPermissionPageOpen=false;render();}
+        function openAddEmployeeModal(){state.editingEmployee=null;state.isEmployeeModalOpen=true;render();} function editEmployee(id){state.editingEmployee=mockDatabase.employees.find(e=>e.id==id);state.isEmployeeModalOpen=true;render();} function viewEmployeeDetail(id){state.editingEmployee=mockDatabase.employees.find(e=>e.id==id);state.isDetailModalOpen=true;render();} function closeEmployeeModals(){state.isEmployeeModalOpen=false;state.isDetailModalOpen=false;render();}
+        function saveEmployee(form){const data=Object.fromEntries(new FormData(form).entries()), sub=state.editingEmployee?'edit':'add'; postData('manageEmployee',{subAction:sub,employee:data});} function deleteEmployee(id){if(confirm('Hapus?'))postData('manageEmployee',{subAction:'delete',employee:{id:id}});} function filterEmployees(q){const l=document.getElementById('employee-list').children; for(let c of l)c.style.display=c.innerText.toLowerCase().includes(q.toLowerCase())?'':'none';}
+        function toggleTask(i) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const k = `${todayStr}_${state.user.id}_${i}`;
+            if(state.checklists.includes(k)) state.checklists = state.checklists.filter(x => x !== k);
+            else {
+                state.checklists.push(k);
+                // Kirim log ke backend (Checklist sederhana)
+                postData('updateChecklist', { date: todayStr, empId: state.user.id, taskIndex: i });
+            }
+            render();
+        }
+        function submitPermission(){const t=document.getElementById('perm-type').value, r=document.getElementById('perm-reason').value; if(r)postData('permission',{date:new Date().toISOString().split('T')[0],empId:state.user.id,type:t,reason:r});}
+        function initGPS(){navigator.geolocation.watchPosition(p=>{const d=calcDist(p.coords.latitude,p.coords.longitude,CAFE_CONFIG.lat,CAFE_CONFIG.lng); state.gps={valid:d<=CAFE_CONFIG.radius,lat:p.coords.latitude,lng:p.coords.longitude,dist:d}; updateUIOnGPSChange();})}
+        function calcDist(lat1,lon1,lat2,lon2){const R=6371e3, a=0.5-Math.cos((lat2-lat1)*Math.PI/180)/2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*(1-Math.cos((lon2-lon1)*Math.PI/180))/2; return Math.round(R*2*Math.asin(Math.sqrt(a)));}
+        function updateUIOnGPSChange(){const d=document.getElementById('gps-distance'), b=document.getElementById('gps-badge'), btn=document.getElementById('btn-clock-in-action'); if(d)d.innerText=`${state.gps.dist}m`; if(b)b.innerHTML=state.gps.valid?`<span class="text-green-600">Dalam Area</span>`:`<span class="text-red-600">Luar Area</span>`; if(btn)btn.disabled=!state.gps.valid;}
+        function clockAction(t){const now=new Date().toISOString().split('T')[0], time=new Date().toLocaleTimeString('id',{hour:'2-digit',minute:'2-digit',hour12:false}); if(t=='in') postData('clockIn',{date:now,empId:state.user.id,clockIn:time,status:'Tepat Waktu',lat:state.gps.lat,lng:state.gps.lng}); else postData('clockOut',{date:now,empId:state.user.id,clockOut:time});}
+        async function startCamera(){try{state.cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}}); document.getElementById('camera-preview').srcObject=state.cameraStream;}catch(e){console.log(e);}} function stopCamera(){if(state.cameraStream)state.cameraStream.getTracks().forEach(t=>t.stop());}
+        function showToast(m,t,a=true){const d=document.createElement('div'); d.className=`bg-gray-800 text-white px-4 py-2 rounded shadow m-2 text-sm`; d.innerText=m; document.getElementById('toast-container').appendChild(d); if(a)setTimeout(()=>d.remove(),3000);}
+        
+        function renderClockModal(){return Object.assign(document.createElement('div'),{className:"fixed inset-0 z-50 bg-white flex flex-col",innerHTML:`<div class="p-4 flex justify-between"><button onclick="closeClockPage()"><i class="fa-solid fa-arrow-left"></i></button><h2>Absen</h2><div></div></div><div class="flex-1 bg-gray-100 relative"><div class="absolute top-4 left-4 bg-white p-2 rounded shadow text-xs"><p id="gps-distance">0m</p><div id="gps-badge">Cek..</div></div><video id="camera-preview" autoplay class="w-full h-full object-cover"></video></div><div class="p-6"><button id="btn-clock-in-action" onclick="clockAction('in')" class="w-full py-3 bg-green-600 text-white rounded-xl font-bold mb-2 disabled:opacity-50">MASUK</button><button onclick="clockAction('out')" class="w-full py-3 bg-red-600 text-white rounded-xl font-bold">PULANG</button></div>`});}
+        function renderPermissionModal(){return Object.assign(document.createElement('div'),{className:"fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4",innerHTML:`<div class="bg-white w-full max-w-md rounded-2xl p-6"><h2 class="text-xl font-bold mb-4">Izin</h2><select id="perm-type" class="w-full p-2 border rounded mb-2"><option>Sakit</option><option>Izin</option></select><textarea id="perm-reason" class="w-full p-2 border rounded mb-4" placeholder="Alasan"></textarea><div class="flex gap-2"><button onclick="closePermissionPage()" class="flex-1 py-2 bg-gray-200 rounded">Batal</button><button onclick="submitPermission()" class="flex-1 py-2 bg-indigo-600 text-white rounded">Kirim</button></div></div>`});}
+        function renderEmpProfile(){return `<div class="p-6 pt-10 text-center"><img src="${state.user.photo}" class="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-white shadow"><h2 class="text-xl font-bold">${state.user.name}</h2><p class="text-gray-500">${state.user.position}</p><button onclick="logout()" class="mt-8 w-full py-3 bg-red-50 text-red-600 font-bold rounded-xl">Keluar</button></div>`;}
+        function renderEmpHistory() { const history = mockDatabase.attendance.filter(a => a.empId === state.user.id).reverse(); return `<div class="bg-white pt-8 pb-4 px-6 shadow-sm sticky top-0 z-30"><h2 class="text-2xl font-bold text-gray-800">Riwayat Absensi</h2></div><div class="px-6 py-6 space-y-4">${history.length === 0 ? '<div class="text-center py-10 opacity-50"><p class="text-sm">Belum ada data absensi.</p></div>' : ''}${history.map(h => `<div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden"><div class="absolute left-0 top-0 bottom-0 w-1.5 ${h.status === 'Terlambat' ? 'bg-orange-400' : 'bg-green-500'}"></div><div class="flex justify-between items-start mb-3"><div><p class="text-xs text-gray-400 font-bold uppercase mb-0.5">${new Date(h.date).toLocaleDateString('id-ID', {weekday: 'long', day:'numeric', month:'short'})}</p><span class="px-2 py-0.5 rounded text-[10px] font-bold ${h.status === 'Terlambat' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}">${h.status}</span></div></div><div class="flex gap-4 border-t border-gray-50 pt-3"><div class="flex-1"><p class="text-[10px] text-gray-400 mb-1">Masuk</p><p class="font-bold text-gray-700">${h.clockIn}</p></div><div class="flex-1"><p class="text-[10px] text-gray-400 mb-1">Pulang</p><p class="font-bold text-gray-700">${h.clockOut || '--:--'}</p></div></div></div>`).join('')}</div>`; }
+        function renderEmployeeDetailModal() { const e = state.editingEmployee; if(!e)return; return Object.assign(document.createElement('div'),{className:"fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4",innerHTML:`<div class="bg-white w-full max-w-md rounded-2xl p-6"><div class="text-center mb-6"><img src="${e.photo||''}" class="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-white shadow"><h2 class="text-2xl font-bold">${e.name}</h2><p class="text-indigo-600">${e.position}</p></div><div class="space-y-2 text-sm"><p><strong>ID:</strong> ${e.id}</p><p><strong>WA:</strong> ${e.phone||'-'}</p><p><strong>Alamat:</strong> ${e.address||'-'}</p></div><button onclick="closeEmployeeModals()" class="mt-8 w-full py-3 bg-gray-100 rounded-xl font-bold">Tutup</button></div>`}); }
+        function renderEmployeeFormModal() {
+            const e = state.editingEmployee || {}, isEdit = !!state.editingEmployee;
+            return Object.assign(document.createElement('div'),{className:"fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4",innerHTML:`<div class="bg-white w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto"><div class="flex justify-between mb-6"><h2 class="text-xl font-bold">${isEdit?'Edit':'Tambah'} Karyawan</h2><button onclick="closeEmployeeModals()"><i class="fa-solid fa-xmark"></i></button></div><form onsubmit="event.preventDefault(); saveEmployee(this)" class="space-y-4"><div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-bold">ID</label><input name="id" value="${e.id||''}" class="w-full p-2 border rounded" ${isEdit?'readonly':''} required></div><div><label class="text-xs font-bold">Inisial</label><input name="initial" value="${e.initial||''}" class="w-full p-2 border rounded"></div></div><div><label class="text-xs font-bold">Nama</label><input name="name" value="${e.name||''}" class="w-full p-2 border rounded" required></div><div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-bold">Posisi</label><input name="position" value="${e.position||''}" class="w-full p-2 border rounded"></div><div><label class="text-xs font-bold">Password</label><input name="pass" value="${e.pass||''}" class="w-full p-2 border rounded"></div></div><div><label class="text-xs font-bold">Alamat</label><textarea name="address" class="w-full p-2 border rounded">${e.address||''}</textarea></div><div><label class="text-xs font-bold">Foto URL</label><input name="photo" value="${e.photo||''}" class="w-full p-2 border rounded"></div><button class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Simpan</button></form></div>`});
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
