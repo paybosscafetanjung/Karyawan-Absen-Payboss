@@ -268,10 +268,10 @@
     let mediaStream = null;
 
     const JOB_DESKS = {
-      'Barista': { start: ['Cek mesin kopi', 'Stok susu', 'Bersihkan bar'], end: ['Matikan mesin', 'Bersihkan alat', 'Buang sampah'] },
-      'Kasir': { start: ['Hitung modal', 'Cek struk', 'Nyalakan POS'], end: ['Hitung omzet', 'Setor uang', 'Matikan POS'] },
-      'Pelayan': { start: ['Cek meja', 'Siapkan alat makan', 'Cek tisu'], end: ['Bersihkan meja', 'Sapu lantai', 'Matikan lampu'] },
-      'Chef': { start: ['Cek bahan', 'Nyalakan kompor', 'Cek stok'], end: ['Bersihkan dapur', 'Simpan bahan', 'Matikan gas'] },
+      'Barista': { start: ['Cek & kalibrasi mesin espresso/grinder', 'Restock susu, biji kopi, & cup', 'Cek kebersihan station bar'], end: ['Bersihkan mesin (Backflush) & area bar', 'Cuci blender & peralatan seduh', 'Matikan mesin & catat stok sisa'] },
+      'Kasir': { start: ['Hitung modal awal (Opening Float)', 'Cek kertas struk & mesin EDC', 'Login & cek koneksi POS'], end: ['Hitung uang fisik & closing POS', 'Pastikan kas balance (No selisih)', 'Rapikan area meja kasir'] },
+      'Pelayan': { start: ['Cek kebersihan meja & kursi tamu', 'Siapkan cutlery (sendok/garpu) & tisu', 'Cek ketersediaan buku menu'], end: ['Clear-up semua meja kotor', 'Reset meja untuk besok', 'Pastikan area dining bersih total'] },
+      'Chef': { start: ['Mise en place (Potong/siapkan bahan)', 'Cek kualitas bahan baku di kulkas', 'Cek stok'], end: ['Bersihkan kompor & area masak', 'Wrap & simpan bahan makanan (FIFO)', 'Matikan gas & listrik dapur'] },
       'Supervisor': { start: ['Briefing tim', 'Cek area', 'Cek target'], end: ['Laporan harian', 'Evaluasi shift', 'Kunci pintu'] }
     };
 
