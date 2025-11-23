@@ -106,7 +106,6 @@
        <form onsubmit="saveEmployee(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="text" id="emp-id" readonly class="w-full p-3 border rounded-xl bg-gray-100">
         <input type="text" id="emp-name" required class="w-full p-3 border rounded-xl" placeholder="Nama">
-        <!-- UPDATE: Tambahkan Bartender & Pramusaji di opsi -->
         <select id="emp-position" required class="w-full p-3 border rounded-xl">
             <option value="Barista">Barista</option>
             <option value="Bartender">Bartender</option>
@@ -129,7 +128,7 @@
      </div>
     </div>
 
-    <!-- TAB: Attendance (WITH DATE FILTER & EDIT) -->
+    <!-- TAB: Attendance (WITH CASH REPORT) -->
     <div id="manager-tab-attendance" class="tab-content hidden">
       <div class="bg-white rounded-2xl p-8 card-shadow">
         <div class="flex flex-wrap justify-between items-center mb-6">
@@ -143,7 +142,7 @@
       </div>
     </div>
     
-    <!-- TAB: Roster (IMPROVED GRID & SORTED) -->
+    <!-- TAB: Roster -->
     <div id="manager-tab-roster" class="tab-content hidden">
       <div class="bg-white rounded-2xl p-8 card-shadow">
         <div class="flex justify-between items-center mb-6">
@@ -163,7 +162,7 @@
       </div>
     </div>
 
-    <!-- TAB: REPORT (NEW) -->
+    <!-- TAB: REPORT -->
     <div id="manager-tab-report" class="tab-content hidden">
         <div class="bg-white rounded-2xl p-8 card-shadow">
             <div class="flex flex-wrap items-end gap-4 mb-8 bg-blue-50 p-6 rounded-xl border border-blue-100">
@@ -277,6 +276,13 @@
     <div class="space-y-4">
      <div class="bg-green-50 p-4 rounded-xl"><h3 class="font-bold mb-2">📸 Selfie</h3><div class="camera-view mb-2"><video id="video-in" autoplay playsinline></video><canvas id="canvas-in" class="hidden"></canvas><img id="photo-in" class="captured-photo"></div><div class="flex gap-2"><button onclick="initCamera('in')" class="flex-1 bg-blue-600 text-white py-2 rounded">Buka Kamera</button><button onclick="takeSnapshot('in')" class="flex-1 bg-green-600 text-white py-2 rounded">Ambil Foto</button></div><input type="hidden" id="selfie-in-data"></div>
      <div class="bg-blue-50 p-4 rounded-xl"><h3 class="font-bold mb-2">📍 GPS</h3><div id="gps-status-in" class="hidden mb-2 p-2 text-center font-bold rounded"></div><button onclick="getLocation('in')" class="w-full bg-blue-600 text-white py-2 rounded">Cek Lokasi</button><input type="text" id="location-in" readonly class="w-full mt-2 p-2 border rounded"></div>
+     
+     <!-- CASH INPUT (HIDDEN UNLESS KASIR) -->
+     <div id="cash-in-input-group" class="hidden bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+        <h3 class="font-bold mb-2 text-emerald-800">💰 Saldo Awal (Cash In)</h3>
+        <input type="number" id="cash-in-amount" placeholder="Masukkan jumlah uang di kasir (Rp)" class="w-full p-3 border-2 border-emerald-300 rounded-xl text-lg font-bold">
+     </div>
+
      <div class="bg-yellow-50 p-4 rounded-xl"><h3 class="font-bold mb-2">📝 Job Desk</h3><div id="job-desk-start" class="space-y-2"></div></div>
      <textarea id="notes-in" class="w-full p-3 border rounded" placeholder="Catatan..."></textarea>
      <div class="flex gap-2"><button onclick="clockIn(event)" id="btn-submit-clock-in" disabled class="flex-1 bg-gray-400 text-white py-3 rounded font-bold cursor-not-allowed">SUBMIT</button><button onclick="hideClockInModal()" class="flex-1 bg-gray-200 py-3 rounded font-bold">Batal</button></div>
@@ -290,6 +296,12 @@
     <div class="space-y-4">
      <div class="bg-red-50 p-4 rounded-xl"><h3 class="font-bold mb-2">📸 Selfie</h3><div class="camera-view mb-2"><video id="video-out" autoplay playsinline></video><canvas id="canvas-out" class="hidden"></canvas><img id="photo-out" class="captured-photo"></div><div class="flex gap-2"><button onclick="initCamera('out')" class="flex-1 bg-blue-600 text-white py-2 rounded">Buka Kamera</button><button onclick="takeSnapshot('out')" class="flex-1 bg-green-600 text-white py-2 rounded">Ambil Foto</button></div><input type="hidden" id="selfie-out-data"></div>
      
+     <!-- CASH INPUT (HIDDEN UNLESS KASIR) -->
+     <div id="cash-out-input-group" class="hidden bg-blue-50 p-4 rounded-xl border border-blue-200">
+        <h3 class="font-bold mb-2 text-blue-800">💰 Saldo Akhir (Cash Out)</h3>
+        <input type="number" id="cash-out-amount" placeholder="Total uang fisik saat pulang (Rp)" class="w-full p-3 border-2 border-blue-300 rounded-xl text-lg font-bold">
+     </div>
+
      <!-- BAGIAN BARU: PENGAJUAN LEMBUR -->
      <div class="bg-orange-50 p-4 rounded-xl border border-orange-200">
          <h3 class="font-bold mb-2 text-orange-800">🔥 Pengajuan Lembur</h3>
@@ -363,6 +375,10 @@
         const m = ('0' + d.getMinutes()).slice(-2);
         return `${h}:${m}`;
     }
+    
+    function formatRupiah(number) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(number);
+    }
 
     // ROSTER VARS
     let currentRosterWeekOffset = 0;
@@ -371,7 +387,6 @@
     const SHIFT_TIMES = { 'Pagi': '06:00-14:00', 'Siang': '14:00-22:00', 'Malam': '22:00-06:00', 'Off': '-' };
     
     // DEFINISI URUTAN JABATAN (Prioritas Tampilan)
-    // Updated to include standardized names
     const POSITION_RANK = { 
         'Supervisor': 1, 
         'Barista': 2, 
@@ -386,7 +401,6 @@
     let currentJobDeskInCompleted = [], currentJobDeskOutCompleted = [];
     let mediaStream = null;
 
-    // UPDATE: Full Standardization of Job Desks
     const JOB_DESKS = {
       'Barista': { start: ['Cek & kalibrasi mesin espresso/grinder', 'Restock susu, biji kopi, & cup', 'Cek kebersihan station bar'], end: ['Bersihkan mesin (Backflush) & area bar', 'Cuci blender & peralatan seduh', 'Matikan mesin & catat stok sisa'] },
       'Bartender': { start: ['Cek & kalibrasi mesin espresso/grinder', 'Restock susu, biji kopi, & cup', 'Cek kebersihan station bar'], end: ['Bersihkan mesin (Backflush) & area bar', 'Cuci blender & peralatan seduh', 'Matikan mesin & catat stok sisa'] },
@@ -549,7 +563,7 @@
       await initApp(); updateManagerDashboard();
     }
 
-    // REVISED: MANAGER ATTENDANCE WITH CORRECTION & OVERTIME BADGE
+    // REVISED: MANAGER ATTENDANCE WITH CORRECTION & OVERTIME BADGE & CASH REPORT
     function renderManagerAttendance() {
       const list = document.getElementById('manager-attendance-list');
       const filterDate = document.getElementById('manager-att-date').value || getLocalISOString();
@@ -569,6 +583,18 @@
                 <div>📥 In: <span class="font-bold">${a.clock_in_time}</span></div>
                 <div>📤 Out: <span class="font-bold">${a.clock_out_time || '-'}</span></div>
              </div>
+             
+             <!-- CASH REPORT FOR MANAGER -->
+             ${(a.cash_in_hand_start || a.cash_in_hand_end) ? `
+                <div class="mt-2 p-2 bg-gray-50 rounded border border-gray-200 text-xs">
+                    <div class="font-bold text-gray-700 mb-1">💰 Laporan Kasir</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="text-green-700">Awal: <b>${formatRupiah(a.cash_in_hand_start || 0)}</b></div>
+                        <div class="text-blue-700">Akhir: <b>${formatRupiah(a.cash_in_hand_end || 0)}</b></div>
+                    </div>
+                </div>
+             ` : ''}
+
              ${a.is_overtime ? `<div class="text-xs text-orange-600 mt-1 italic">"Alasan: ${a.overtime_reason}"</div>` : ''}
              <div class="text-xs text-gray-400 mt-1">${a.notes_in || ''}</div>
           </div>
@@ -921,14 +947,24 @@
       await initApp(); renderEmployeeChatMessages();
     }
 
-    // CLOCK IN/OUT (FIXED LOGIC FOR NIGHT SHIFT)
+    // CLOCK IN/OUT (FIXED LOGIC FOR NIGHT SHIFT + CASH INPUT FOR KASIR)
     function showClockInModal() { 
         document.getElementById('clock-in-modal').classList.remove('hidden'); 
         initCamera('in');
         const list = JOB_DESKS[currentUser.position]?.start || [];
         document.getElementById('job-desk-start').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobIn(${i},this.checked)"> ${t}</label>`).join('');
         currentJobDeskInCompleted = [];
+
+        // Show Cash Input if Kasir
+        const cashInput = document.getElementById('cash-in-input-group');
+        if (currentUser.position === 'Kasir') {
+            cashInput.classList.remove('hidden');
+            document.getElementById('cash-in-amount').value = ''; // Reset value
+        } else {
+            cashInput.classList.add('hidden');
+        }
     }
+
     function showClockOutModal() { 
         document.getElementById('clock-out-modal').classList.remove('hidden'); 
         initCamera('out'); 
@@ -941,6 +977,15 @@
         const list = JOB_DESKS[currentUser.position]?.end || [];
         document.getElementById('job-desk-end').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobOut(${i},this.checked)"> ${t}</label>`).join('');
         currentJobDeskOutCompleted = [];
+
+        // Show Cash Input if Kasir
+        const cashInput = document.getElementById('cash-out-input-group');
+        if (currentUser.position === 'Kasir') {
+            cashInput.classList.remove('hidden');
+            document.getElementById('cash-out-amount').value = ''; // Reset value
+        } else {
+            cashInput.classList.add('hidden');
+        }
     }
     
     function toggleOvertimeInput(checkbox) {
@@ -961,6 +1006,17 @@
     async function clockIn(e) {
       e.preventDefault();
       const btn = document.getElementById('btn-submit-clock-in');
+      
+      // Validasi Uang Kasir
+      let cashStart = '';
+      if (currentUser.position === 'Kasir') {
+          cashStart = document.getElementById('cash-in-amount').value;
+          if (!cashStart) {
+              alert("Wajib mengisi jumlah uang di brangkas!");
+              return;
+          }
+      }
+
       btn.disabled = true; btn.innerText = "Memproses...";
       
       const currentTimeStr = getLocalTimeString();
@@ -975,7 +1031,8 @@
         location_in: document.getElementById('location-in').value,
         selfie_in_url: document.getElementById('selfie-in-data').value,
         notes_in: document.getElementById('notes-in').value,
-        job_desk_in: currentJobDeskInCompleted.length + ' tugas selesai'
+        job_desk_in: currentJobDeskInCompleted.length + ' tugas selesai',
+        cash_in_hand_start: cashStart // Kirim data uang
       };
       
       await postData('create', { payload });
@@ -996,6 +1053,16 @@
       if(isOvertime) {
           if(!otDuration || !otReason) {
               alert("Mohon isi Durasi dan Alasan Lembur!");
+              return;
+          }
+      }
+
+      // Validasi Uang Kasir (Akhir)
+      let cashEnd = '';
+      if (currentUser.position === 'Kasir') {
+          cashEnd = document.getElementById('cash-out-amount').value;
+          if (!cashEnd) {
+              alert("Wajib mengisi jumlah uang akhir di brangkas!");
               return;
           }
       }
@@ -1023,7 +1090,9 @@
         // Data Lembur
         is_overtime: isOvertime,
         overtime_duration: isOvertime ? otDuration : '',
-        overtime_reason: isOvertime ? otReason : ''
+        overtime_reason: isOvertime ? otReason : '',
+        // Data Uang Akhir
+        cash_in_hand_end: cashEnd 
       };
       
       await postData('update', { payload });
