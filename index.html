@@ -106,7 +106,19 @@
        <form onsubmit="saveEmployee(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="text" id="emp-id" readonly class="w-full p-3 border rounded-xl bg-gray-100">
         <input type="text" id="emp-name" required class="w-full p-3 border rounded-xl" placeholder="Nama">
-        <select id="emp-position" required class="w-full p-3 border rounded-xl"><option>Barista</option><option>Kasir</option><option>Pelayan</option><option>Chef</option><option>Supervisor</option></select>
+        <!-- UPDATE: Tambahkan Bartender & Pramusaji di opsi -->
+        <select id="emp-position" required class="w-full p-3 border rounded-xl">
+            <option value="Barista">Barista</option>
+            <option value="Bartender">Bartender</option>
+            <option value="Kasir">Kasir</option>
+            <option value="Pelayan">Pelayan</option>
+            <option value="Pramusaji">Pramusaji</option>
+            <option value="Chef">Chef</option>
+            <option value="Supervisor">Supervisor</option>
+            <option value="Manager">Manager</option>
+            <option value="Security">Security</option>
+            <option value="Admin">Admin</option>
+        </select>
         <input type="tel" id="emp-phone" required class="w-full p-3 border rounded-xl" placeholder="Telepon">
         <input type="email" id="emp-email" required class="w-full p-3 border rounded-xl" placeholder="Email">
         <input type="text" id="emp-password" required placeholder="Password Login" class="w-full p-3 border rounded-xl">
@@ -359,24 +371,33 @@
     const SHIFT_TIMES = { 'Pagi': '06:00-14:00', 'Siang': '14:00-22:00', 'Malam': '22:00-06:00', 'Off': '-' };
     
     // DEFINISI URUTAN JABATAN (Prioritas Tampilan)
+    // Updated to include standardized names
     const POSITION_RANK = { 
         'Supervisor': 1, 
         'Barista': 2, 
+        'Bartender': 2, 
         'Kasir': 3, 
         'Chef': 4, 
-        'Pelayan': 5 
+        'Pelayan': 5,
+        'Pramusaji': 5
     };
 
     let allData = [], currentUser = null, currentChatEmployee = null;
     let currentJobDeskInCompleted = [], currentJobDeskOutCompleted = [];
     let mediaStream = null;
 
+    // UPDATE: Full Standardization of Job Desks
     const JOB_DESKS = {
       'Barista': { start: ['Cek & kalibrasi mesin espresso/grinder', 'Restock susu, biji kopi, & cup', 'Cek kebersihan station bar'], end: ['Bersihkan mesin (Backflush) & area bar', 'Cuci blender & peralatan seduh', 'Matikan mesin & catat stok sisa'] },
+      'Bartender': { start: ['Cek & kalibrasi mesin espresso/grinder', 'Restock susu, biji kopi, & cup', 'Cek kebersihan station bar'], end: ['Bersihkan mesin (Backflush) & area bar', 'Cuci blender & peralatan seduh', 'Matikan mesin & catat stok sisa'] },
       'Kasir': { start: ['Hitung modal awal (Opening Float)', 'Cek kertas struk & mesin EDC', 'Login & cek koneksi POS'], end: ['Hitung uang fisik & closing POS', 'Pastikan kas balance (No selisih)', 'Rapikan area meja kasir'] },
       'Pelayan': { start: ['Cek kebersihan meja & kursi tamu', 'Siapkan cutlery (sendok/garpu) & tisu', 'Cek ketersediaan buku menu'], end: ['Clear-up semua meja kotor', 'Reset meja untuk besok', 'Pastikan area dining bersih total'] },
+      'Pramusaji': { start: ['Cek kebersihan meja & kursi tamu', 'Siapkan cutlery (sendok/garpu) & tisu', 'Cek ketersediaan buku menu'], end: ['Clear-up semua meja kotor', 'Reset meja untuk besok', 'Pastikan area dining bersih total'] },
       'Chef': { start: ['Mise en place (Potong/siapkan bahan)', 'Cek kualitas bahan baku di kulkas', 'Cek stok'], end: ['Bersihkan kompor & area masak', 'Wrap & simpan bahan makanan (FIFO)', 'Matikan gas & listrik dapur'] },
-      'Supervisor': { start: ['Briefing tim', 'Cek area', 'Cek target'], end: ['Laporan harian', 'Evaluasi shift', 'Kunci pintu'] }
+      'Supervisor': { start: ['Briefing tim', 'Cek area', 'Cek target'], end: ['Laporan harian', 'Evaluasi shift', 'Kunci pintu'] },
+      'Manager': { start: [], end: [] },
+      'Security': { start: [], end: [] },
+      'Admin': { start: [], end: [] }
     };
 
     // --- API HELPER ---
