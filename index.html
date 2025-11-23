@@ -83,7 +83,7 @@
    <div class="bg-white shadow-md p-4">
     <div class="max-w-7xl mx-auto flex gap-4 flex-wrap">
       <button onclick="showManagerTab('employees')" id="tab-employees" class="tab-button active">👥 Karyawan</button> 
-      <button onclick="showManagerTab('attendance')" id="tab-attendance" class="tab-button">📊 Absensi</button>
+      <button onclick="showManagerTab('attendance')" id="tab-attendance" class="tab-button">📊 Absensi & Koreksi</button>
       <button onclick="showManagerTab('roster')" id="tab-roster" class="tab-button">📅 Roster</button>
       <button onclick="showManagerTab('leave')" id="tab-leave" class="tab-button">📄 Izin</button>
       <button onclick="showManagerTab('chat')" id="tab-chat" class="tab-button">💬 Chat</button>
@@ -116,14 +116,25 @@
      </div>
     </div>
 
-    <!-- TAB: Attendance -->
-    <div id="manager-tab-attendance" class="tab-content hidden"><div class="bg-white rounded-2xl p-8 card-shadow"><h2 class="text-2xl font-bold text-gray-800 mb-6">📊 Absensi Hari Ini</h2><div id="today-attendance" class="space-y-4"></div></div></div>
+    <!-- TAB: Attendance (WITH DATE FILTER & EDIT) -->
+    <div id="manager-tab-attendance" class="tab-content hidden">
+      <div class="bg-white rounded-2xl p-8 card-shadow">
+        <div class="flex flex-wrap justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-gray-800">📊 Data Absensi</h2>
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-bold text-gray-600">Pilih Tanggal:</label>
+            <input type="date" id="manager-att-date" onchange="renderManagerAttendance()" class="p-2 border rounded-xl bg-gray-50">
+          </div>
+        </div>
+        <div id="manager-attendance-list" class="space-y-4"></div>
+      </div>
+    </div>
     
     <!-- TAB: Roster (IMPROVED GRID) -->
     <div id="manager-tab-roster" class="tab-content hidden">
       <div class="bg-white rounded-2xl p-8 card-shadow">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold">📅 Jadwal Kerja (Tap to Change)</h2>
+            <h2 class="text-2xl font-bold">📅 Jadwal Kerja</h2>
             <div class="flex gap-2 items-center bg-gray-100 p-1 rounded-lg">
                 <button onclick="changeRosterWeek(-1)" class="px-3 py-1 bg-white rounded shadow text-sm font-bold">&lt;</button>
                 <span id="roster-period-label" class="px-3 text-sm font-bold">Minggu Ini</span>
@@ -237,6 +248,39 @@
    </div>
   </div>
 
+  <!-- NEW MODAL: CORRECTION -->
+  <div id="correction-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2 class="text-2xl font-bold mb-4 border-b pb-2">✏️ Koreksi Absensi</h2>
+      <form onsubmit="submitCorrection(event)" class="space-y-4">
+        <input type="hidden" id="correct-emp-id">
+        <div class="grid grid-cols-2 gap-4">
+           <div><label class="block text-sm font-bold text-gray-700">Tanggal</label><input type="text" id="correct-date" readonly class="w-full p-2 bg-gray-100 border rounded"></div>
+           <div><label class="block text-sm font-bold text-gray-700">Nama</label><input type="text" id="correct-name" readonly class="w-full p-2 bg-gray-100 border rounded"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+           <div><label class="block text-sm font-bold text-gray-700">Jam Masuk</label><input type="time" id="correct-in-time" class="w-full p-2 border rounded"></div>
+           <div><label class="block text-sm font-bold text-gray-700">Jam Pulang</label><input type="time" id="correct-out-time" class="w-full p-2 border rounded"></div>
+        </div>
+        <div>
+            <label class="block text-sm font-bold text-gray-700">Status Kehadiran</label>
+            <select id="correct-status" class="w-full p-2 border rounded">
+                <option value="Tepat Waktu">Tepat Waktu</option>
+                <option value="Terlambat">Terlambat</option>
+                <option value="Lupa Absen">Lupa Absen</option>
+                <option value="Alpha">Alpha</option>
+                <option value="Izin">Izin</option>
+            </select>
+        </div>
+        <div class="bg-yellow-50 p-3 rounded text-sm text-gray-600">⚠️ Koreksi akan menimpa data yang ada secara permanen.</div>
+        <div class="flex gap-2 pt-2">
+            <button type="submit" id="btn-submit-correction" class="flex-1 btn-primary text-white font-bold py-2 rounded">Simpan Koreksi</button>
+            <button type="button" onclick="document.getElementById('correction-modal').classList.add('hidden')" class="flex-1 bg-gray-300 font-bold py-2 rounded">Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     // --- KONFIGURASI ---
     const API_URL = "https://script.google.com/macros/s/AKfycby49EpPVo7oHgFLLjS421nnYdKt7EjGa6elDQ4jKfnXa_9xQdtr2ysXbuwDB_j7G2cQ/exec";
@@ -281,8 +325,8 @@
         const body = JSON.stringify({ action, ...payload });
         const res = await fetch(API_URL, { 
             method: 'POST', 
-            redirect: 'follow', // Penting untuk Google Apps Script
-            headers: { "Content-Type": "text/plain;charset=utf-8" }, // Mencegah Preflight CORS
+            redirect: 'follow', 
+            headers: { "Content-Type": "text/plain;charset=utf-8" }, 
             body: body 
         });
         const data = await res.json();
@@ -298,7 +342,12 @@
       updateDateTime();
       setInterval(updateDateTime, 1000);
       const res = await postData('getAll');
-      if(res.isOk) allData = res.data;
+      if(res.isOk) {
+          allData = res.data;
+          // Set default date for manager filter
+          const dateInput = document.getElementById('manager-att-date');
+          if(dateInput && !dateInput.value) dateInput.value = getLocalISOString();
+      }
     }
 
     function updateDateTime() {
@@ -357,11 +406,12 @@
       document.getElementById('tab-'+tab).classList.add('active');
       if(tab === 'chat') renderManagerChatEmployeeList();
       if(tab === 'roster') renderRosterGrid();
+      if(tab === 'attendance') renderManagerAttendance();
     }
 
     function updateManagerDashboard() {
       renderEmployeeList();
-      renderTodayAttendance();
+      renderManagerAttendance();
       renderManagerLeaveList();
       const emps = allData.filter(d=>d.type==='employee');
       const atts = allData.filter(d=>d.type==='attendance' && d.attendance_date === getLocalISOString());
@@ -410,18 +460,74 @@
       await initApp(); updateManagerDashboard();
     }
 
-    function renderTodayAttendance() {
-      const list = document.getElementById('today-attendance');
-      const today = getLocalISOString();
-      const atts = allData.filter(d => d.type==='attendance' && d.attendance_date === today);
-      if(atts.length===0) list.innerHTML = '<p class="text-center text-gray-400 py-4">Belum ada absensi</p>';
+    // REVISED: MANAGER ATTENDANCE WITH CORRECTION
+    function renderManagerAttendance() {
+      const list = document.getElementById('manager-attendance-list');
+      const filterDate = document.getElementById('manager-att-date').value || getLocalISOString();
+      
+      const atts = allData.filter(d => d.type==='attendance' && d.attendance_date === filterDate);
+      
+      if(atts.length===0) list.innerHTML = '<p class="text-center text-gray-400 py-4">Tidak ada data absensi pada tanggal ini.</p>';
       else list.innerHTML = atts.map(a => `
-        <div class="bg-green-50 p-4 rounded-xl border mb-2">
-          <div class="flex justify-between font-bold"><span>${a.name}</span><span class="text-xs bg-white px-2 rounded">${a.attendance_status}</span></div>
-          <div class="text-sm mt-1">In: ${a.clock_in_time} | Out: ${a.clock_out_time || '-'}</div>
+        <div class="bg-white p-4 rounded-xl border mb-3 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+          <div class="flex-1">
+             <div class="flex justify-between font-bold">
+                <span class="text-lg">${a.name}</span>
+                <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">${a.attendance_status}</span>
+             </div>
+             <div class="text-sm text-gray-600 mt-1 grid grid-cols-2 gap-2">
+                <div>📥 In: <span class="font-bold">${a.clock_in_time}</span></div>
+                <div>📤 Out: <span class="font-bold">${a.clock_out_time || '-'}</span></div>
+             </div>
+             <div class="text-xs text-gray-400 mt-1">${a.notes_in || ''}</div>
+          </div>
+          <button onclick="openCorrectionModal('${a.employee_id}', '${a.attendance_date}')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2">
+            ✏️ Koreksi
+          </button>
         </div>
       `).join('');
     }
+
+    // NEW: CORRECTION LOGIC
+    function openCorrectionModal(empId, date) {
+        const record = allData.find(d => d.type === 'attendance' && d.employee_id === empId && d.attendance_date === date);
+        if(!record) return showToast("Data tidak ditemukan", "error");
+
+        document.getElementById('correct-emp-id').value = empId;
+        document.getElementById('correct-date').value = date;
+        document.getElementById('correct-name').value = record.name;
+        document.getElementById('correct-in-time').value = record.clock_in_time || '';
+        document.getElementById('correct-out-time').value = record.clock_out_time || '';
+        document.getElementById('correct-status').value = record.attendance_status || 'Tepat Waktu';
+
+        document.getElementById('correction-modal').classList.remove('hidden');
+    }
+
+    async function submitCorrection(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit-correction');
+        btn.disabled = true; btn.innerText = "Menyimpan...";
+
+        const payload = {
+            type: 'attendance',
+            employee_id: document.getElementById('correct-emp-id').value,
+            attendance_date: document.getElementById('correct-date').value,
+            clock_in_time: document.getElementById('correct-in-time').value,
+            clock_out_time: document.getElementById('correct-out-time').value,
+            attendance_status: document.getElementById('correct-status').value,
+            // Keep existing fields safe if not edited
+            notes_in: "Dikoreksi Manager",
+        };
+
+        await postData('update', { payload });
+        document.getElementById('correction-modal').classList.add('hidden');
+        showToast("Absensi Berhasil Dikoreksi");
+        btn.disabled = false; btn.innerText = "Simpan Koreksi";
+        
+        await initApp();
+        renderManagerAttendance();
+    }
+
 
     function renderManagerLeaveList() {
       const list = document.getElementById('manager-leave-list');
@@ -467,7 +573,6 @@
         const d = new Date(today);
         d.setDate(startDiff + i);
         const dateStr = d.toLocaleDateString('id-ID', {weekday:'short', day:'numeric'});
-        // Fix date string for storage consistency
         const offset = d.getTimezoneOffset() * 60000;
         const isoDate = new Date(d.getTime() - offset).toISOString().slice(0,10);
         
@@ -628,7 +733,7 @@
       await initApp(); renderEmployeeChatMessages();
     }
 
-    // CLOCK IN/OUT
+    // CLOCK IN/OUT (FIXED LOGIC FOR NIGHT SHIFT)
     function showClockInModal() { 
         document.getElementById('clock-in-modal').classList.remove('hidden'); 
         initCamera('in');
@@ -679,11 +784,20 @@
       e.preventDefault();
       const btn = document.getElementById('btn-submit-clock-out');
       btn.disabled = true; btn.innerText = "Memproses...";
+
+      // FIX: Cari tanggal masuk yang asli (untuk shift malam)
+      const myPendingAttendance = allData.find(d => 
+          d.type === 'attendance' && 
+          d.employee_id === currentUser.employee_id && 
+          (!d.clock_out_time || d.clock_out_time === '')
+      );
+
+      const targetDate = myPendingAttendance ? myPendingAttendance.attendance_date : getLocalISOString();
       
       const payload = {
         type: 'attendance',
         employee_id: currentUser.employee_id,
-        attendance_date: getLocalISOString(),
+        attendance_date: targetDate, // Gunakan tanggal asli saat masuk
         clock_out_time: getLocalTimeString(),
         location_out: document.getElementById('location-out').value,
         selfie_out_url: document.getElementById('selfie-out-data').value,
