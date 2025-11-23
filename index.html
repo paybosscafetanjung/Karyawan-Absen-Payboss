@@ -83,8 +83,9 @@
    <div class="bg-white shadow-md p-4">
     <div class="max-w-7xl mx-auto flex gap-4 flex-wrap">
       <button onclick="showManagerTab('employees')" id="tab-employees" class="tab-button active">👥 Karyawan</button> 
-      <button onclick="showManagerTab('attendance')" id="tab-attendance" class="tab-button">📊 Absensi & Koreksi</button>
+      <button onclick="showManagerTab('attendance')" id="tab-attendance" class="tab-button">📊 Absensi</button>
       <button onclick="showManagerTab('roster')" id="tab-roster" class="tab-button">📅 Roster</button>
+      <button onclick="showManagerTab('report')" id="tab-report" class="tab-button">📈 Laporan</button>
       <button onclick="showManagerTab('leave')" id="tab-leave" class="tab-button">📄 Izin</button>
       <button onclick="showManagerTab('chat')" id="tab-chat" class="tab-button">💬 Chat</button>
     </div>
@@ -130,7 +131,7 @@
       </div>
     </div>
     
-    <!-- TAB: Roster (IMPROVED GRID) -->
+    <!-- TAB: Roster (IMPROVED GRID & SORTED) -->
     <div id="manager-tab-roster" class="tab-content hidden">
       <div class="bg-white rounded-2xl p-8 card-shadow">
         <div class="flex justify-between items-center mb-6">
@@ -148,6 +149,42 @@
             </table>
         </div>
       </div>
+    </div>
+
+    <!-- TAB: REPORT (NEW) -->
+    <div id="manager-tab-report" class="tab-content hidden">
+        <div class="bg-white rounded-2xl p-8 card-shadow">
+            <div class="flex flex-wrap items-end gap-4 mb-8 bg-blue-50 p-6 rounded-xl border border-blue-100">
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">📅 Dari Tanggal</label>
+                    <input type="date" id="report-start" class="w-full p-3 border rounded-xl shadow-sm">
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">📅 Sampai Tanggal</label>
+                    <input type="date" id="report-end" class="w-full p-3 border rounded-xl shadow-sm">
+                </div>
+                <button onclick="generateReport()" class="btn-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition">
+                    🔍 Tampilkan Laporan
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-700">
+                            <th class="p-4 rounded-tl-xl border-b-2">Nama Karyawan</th>
+                            <th class="p-4 border-b-2">Jabatan</th>
+                            <th class="p-4 border-b-2 text-center">Jml Kehadiran</th>
+                            <th class="p-4 border-b-2 text-center">Total Jam Kerja</th>
+                            <th class="p-4 rounded-tr-xl border-b-2 text-center">Total Lembur</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-body" class="text-gray-600">
+                        <tr><td colspan="5" class="p-8 text-center text-gray-400">Silakan pilih rentang tanggal untuk melihat laporan.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- TAB: Leave -->
@@ -240,6 +277,20 @@
     <h2 class="text-3xl font-bold text-center mb-4">⛔ Clock Out</h2>
     <div class="space-y-4">
      <div class="bg-red-50 p-4 rounded-xl"><h3 class="font-bold mb-2">📸 Selfie</h3><div class="camera-view mb-2"><video id="video-out" autoplay playsinline></video><canvas id="canvas-out" class="hidden"></canvas><img id="photo-out" class="captured-photo"></div><div class="flex gap-2"><button onclick="initCamera('out')" class="flex-1 bg-blue-600 text-white py-2 rounded">Buka Kamera</button><button onclick="takeSnapshot('out')" class="flex-1 bg-green-600 text-white py-2 rounded">Ambil Foto</button></div><input type="hidden" id="selfie-out-data"></div>
+     
+     <!-- BAGIAN BARU: PENGAJUAN LEMBUR -->
+     <div class="bg-orange-50 p-4 rounded-xl border border-orange-200">
+         <h3 class="font-bold mb-2 text-orange-800">🔥 Pengajuan Lembur</h3>
+         <label class="flex items-center gap-2 mb-2 cursor-pointer">
+             <input type="checkbox" id="check-overtime" onchange="toggleOvertimeInput(this)" class="w-5 h-5 accent-orange-600">
+             <span class="text-sm font-bold">Saya melakukan Lembur hari ini</span>
+         </label>
+         <div id="overtime-inputs" class="hidden space-y-2 mt-2 pl-7 border-l-2 border-orange-200">
+             <input type="number" id="overtime-duration" placeholder="Durasi (Jam)" class="w-full p-2 text-sm border rounded">
+             <input type="text" id="overtime-reason" placeholder="Alasan (Wajib diisi)" class="w-full p-2 text-sm border rounded">
+         </div>
+     </div>
+
      <div class="bg-blue-50 p-4 rounded-xl"><h3 class="font-bold mb-2">📍 GPS</h3><div id="gps-status-out" class="hidden mb-2 p-2 text-center font-bold rounded"></div><button onclick="getLocation('out')" class="w-full bg-blue-600 text-white py-2 rounded">Cek Lokasi</button><input type="text" id="location-out" readonly class="w-full mt-2 p-2 border rounded"></div>
      <div class="bg-yellow-50 p-4 rounded-xl"><h3 class="font-bold mb-2">📋 Job Desk Akhir</h3><div id="job-desk-end" class="space-y-2"></div></div>
      <textarea id="notes-out" class="w-full p-3 border rounded" placeholder="Catatan..."></textarea>
@@ -306,6 +357,15 @@
     const SHIFT_TYPES = ['Off', 'Pagi', 'Siang', 'Malam'];
     const SHIFT_STYLES = { 'Off': 'bg-gray-200', 'Pagi': 'bg-yellow-200', 'Siang': 'bg-orange-200', 'Malam': 'bg-blue-200' };
     const SHIFT_TIMES = { 'Pagi': '06:00-14:00', 'Siang': '14:00-22:00', 'Malam': '22:00-06:00', 'Off': '-' };
+    
+    // DEFINISI URUTAN JABATAN (Prioritas Tampilan)
+    const POSITION_RANK = { 
+        'Supervisor': 1, 
+        'Barista': 2, 
+        'Kasir': 3, 
+        'Chef': 4, 
+        'Pelayan': 5 
+    };
 
     let allData = [], currentUser = null, currentChatEmployee = null;
     let currentJobDeskInCompleted = [], currentJobDeskOutCompleted = [];
@@ -346,7 +406,15 @@
           allData = res.data;
           // Set default date for manager filter
           const dateInput = document.getElementById('manager-att-date');
-          if(dateInput && !dateInput.value) dateInput.value = getLocalISOString();
+          const reportStart = document.getElementById('report-start');
+          const reportEnd = document.getElementById('report-end');
+          
+          const today = getLocalISOString();
+          if(dateInput && !dateInput.value) dateInput.value = today;
+          
+          // Default report: 1st of month to today
+          if(reportStart && !reportStart.value) reportStart.value = today.slice(0, 8) + '01';
+          if(reportEnd && !reportEnd.value) reportEnd.value = today;
       }
     }
 
@@ -398,7 +466,7 @@
 
     // --- MANAGER ---
     function showManagerTab(tab) {
-      ['employees','attendance','roster','leave','chat'].forEach(t => {
+      ['employees','attendance','roster','leave','chat', 'report'].forEach(t => {
         document.getElementById('manager-tab-'+t).classList.add('hidden');
         document.getElementById('tab-'+t).classList.remove('active');
       });
@@ -460,7 +528,7 @@
       await initApp(); updateManagerDashboard();
     }
 
-    // REVISED: MANAGER ATTENDANCE WITH CORRECTION
+    // REVISED: MANAGER ATTENDANCE WITH CORRECTION & OVERTIME BADGE
     function renderManagerAttendance() {
       const list = document.getElementById('manager-attendance-list');
       const filterDate = document.getElementById('manager-att-date').value || getLocalISOString();
@@ -471,14 +539,16 @@
       else list.innerHTML = atts.map(a => `
         <div class="bg-white p-4 rounded-xl border mb-3 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
           <div class="flex-1">
-             <div class="flex justify-between font-bold">
-                <span class="text-lg">${a.name}</span>
-                <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">${a.attendance_status}</span>
+             <div class="flex items-center gap-2 mb-1">
+                <span class="text-lg font-bold">${a.name}</span>
+                <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded font-bold">${a.attendance_status}</span>
+                ${a.is_overtime ? `<span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded font-bold border border-orange-200">🔥 Lembur ${a.overtime_duration} Jam</span>` : ''}
              </div>
-             <div class="text-sm text-gray-600 mt-1 grid grid-cols-2 gap-2">
+             <div class="text-sm text-gray-600 grid grid-cols-2 gap-2">
                 <div>📥 In: <span class="font-bold">${a.clock_in_time}</span></div>
                 <div>📤 Out: <span class="font-bold">${a.clock_out_time || '-'}</span></div>
              </div>
+             ${a.is_overtime ? `<div class="text-xs text-orange-600 mt-1 italic">"Alasan: ${a.overtime_reason}"</div>` : ''}
              <div class="text-xs text-gray-400 mt-1">${a.notes_in || ''}</div>
           </div>
           <button onclick="openCorrectionModal('${a.employee_id}', '${a.attendance_date}')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2">
@@ -487,6 +557,82 @@
         </div>
       `).join('');
     }
+
+    // REPORTING LOGIC
+    function generateReport() {
+        const start = document.getElementById('report-start').value;
+        const end = document.getElementById('report-end').value;
+        const body = document.getElementById('report-table-body');
+
+        if(!start || !end) return alert("Pilih tanggal awal dan akhir!");
+
+        // 1. Filter Data
+        const atts = allData.filter(d => 
+            d.type === 'attendance' && 
+            d.attendance_date >= start && 
+            d.attendance_date <= end
+        );
+
+        // 2. Aggregate per Employee
+        const report = {};
+        
+        atts.forEach(a => {
+            if(!report[a.employee_id]) {
+                report[a.employee_id] = { 
+                    name: a.name, 
+                    position: a.position, 
+                    count: 0, 
+                    workMinutes: 0, 
+                    overtimeHours: 0 
+                };
+            }
+            
+            // Count Attendance
+            report[a.employee_id].count++;
+            
+            // Sum Work Duration (If Clock Out exists)
+            if(a.clock_in_time && a.clock_out_time) {
+                const inMins = timeToMinutes(a.clock_in_time);
+                let outMins = timeToMinutes(a.clock_out_time);
+                
+                // Handle Night Shift Crossing Midnight (e.g., In 23:00, Out 06:00)
+                if(outMins < inMins) outMins += (24 * 60);
+                
+                report[a.employee_id].workMinutes += (outMins - inMins);
+            }
+
+            // Sum Overtime
+            if(a.is_overtime && a.overtime_duration) {
+                report[a.employee_id].overtimeHours += parseFloat(a.overtime_duration);
+            }
+        });
+
+        // 3. Render Table
+        if(Object.keys(report).length === 0) {
+            body.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-400">Tidak ada data pada periode ini.</td></tr>';
+            return;
+        }
+
+        body.innerHTML = Object.values(report).map(r => {
+            const totalHours = (r.workMinutes / 60).toFixed(1);
+            return `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-4 font-bold text-gray-800">${r.name}</td>
+                <td class="p-4 text-sm">${r.position}</td>
+                <td class="p-4 text-center font-bold bg-blue-50 text-blue-800 rounded-lg">${r.count} Shift</td>
+                <td class="p-4 text-center font-bold text-gray-700">${totalHours} Jam</td>
+                <td class="p-4 text-center font-bold text-orange-600">${r.overtimeHours > 0 ? r.overtimeHours + ' Jam' : '-'}</td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    function timeToMinutes(timeStr) {
+        if(!timeStr) return 0;
+        const [h, m] = timeStr.split(':').map(Number);
+        return (h * 60) + m;
+    }
+
 
     // NEW: CORRECTION LOGIC
     function openCorrectionModal(empId, date) {
@@ -559,7 +705,22 @@
     function renderRosterGrid() {
       const headerRow = document.getElementById('roster-header-row');
       const body = document.getElementById('roster-grid-body');
-      const emps = allData.filter(d => d.type === 'employee');
+      
+      // 1. Ambil Data & SORTIR Berdasarkan Jabatan
+      let emps = allData.filter(d => d.type === 'employee');
+      
+      emps.sort((a, b) => {
+          // Ambil ranking, jika tidak ada set ke 99 (paling bawah)
+          const rankA = POSITION_RANK[a.position] || 99;
+          const rankB = POSITION_RANK[b.position] || 99;
+          
+          // Sort Utama: Berdasarkan Ranking Jabatan
+          if (rankA !== rankB) return rankA - rankB;
+          
+          // Sort Kedua: Berdasarkan Nama (Abjad) jika jabatan sama
+          return a.name.localeCompare(b.name);
+      });
+
       const rosters = allData.filter(d => d.type === 'roster');
 
       const today = new Date();
@@ -567,7 +728,7 @@
       const startDiff = today.getDate() - dayOfWeek + (dayOfWeek == 0 ? -6 : 1) + (currentRosterWeekOffset * 7);
       
       const weekDates = [];
-      headerRow.innerHTML = '<th class="p-4">Karyawan</th>';
+      headerRow.innerHTML = '<th class="p-4 bg-gray-50">Karyawan</th>';
       
       for (let i=0; i<7; i++) {
         const d = new Date(today);
@@ -577,18 +738,24 @@
         const isoDate = new Date(d.getTime() - offset).toISOString().slice(0,10);
         
         weekDates.push({ display: dateStr, iso: isoDate });
-        headerRow.innerHTML += `<th class="p-2 text-xs">${dateStr}</th>`;
+        headerRow.innerHTML += `<th class="p-2 text-xs text-center">${dateStr}</th>`;
       }
 
       body.innerHTML = emps.map(e => {
-        let cells = `<td class="p-2 font-bold text-xs text-gray-700">${e.name}</td>`;
+        // Tampilkan Nama DAN Jabatan agar grouping terlihat jelas
+        let cells = `
+            <td class="p-2 border-r bg-gray-50">
+                <div class="font-bold text-xs text-gray-800">${e.name}</div>
+                <div class="text-[10px] text-gray-500 uppercase tracking-wider">${e.position}</div>
+            </td>`;
+            
         weekDates.forEach(dt => {
           const shift = rosters.find(r => r.employee_id === e.employee_id && r.roster_date === dt.iso);
           const shiftType = shift ? shift.shift_type : 'Off';
           const style = SHIFT_STYLES[shiftType];
-          cells += `<td onclick="cycleShift('${e.employee_id}', '${e.name}', '${dt.iso}', '${shiftType}')"><div class="roster-cell ${style}">${shiftType === 'Off' ? '❌' : shiftType}</div></td>`;
+          cells += `<td onclick="cycleShift('${e.employee_id}', '${e.name}', '${dt.iso}', '${shiftType}')"><div class="roster-cell ${style} text-center">${shiftType === 'Off' ? '❌' : shiftType}</div></td>`;
         });
-        return `<tr>${cells}</tr>`;
+        return `<tr class="hover:bg-gray-50 transition">${cells}</tr>`;
       }).join('');
       
       document.getElementById('roster-period-label').innerText = `${weekDates[0].display} - ${weekDates[6].display}`;
@@ -744,10 +911,26 @@
     function showClockOutModal() { 
         document.getElementById('clock-out-modal').classList.remove('hidden'); 
         initCamera('out'); 
+        // Reset Overtime Form
+        document.getElementById('check-overtime').checked = false;
+        document.getElementById('overtime-inputs').classList.add('hidden');
+        document.getElementById('overtime-duration').value = '';
+        document.getElementById('overtime-reason').value = '';
+        
         const list = JOB_DESKS[currentUser.position]?.end || [];
         document.getElementById('job-desk-end').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobOut(${i},this.checked)"> ${t}</label>`).join('');
         currentJobDeskOutCompleted = [];
     }
+    
+    function toggleOvertimeInput(checkbox) {
+        const inputs = document.getElementById('overtime-inputs');
+        if(checkbox.checked) {
+            inputs.classList.remove('hidden');
+        } else {
+            inputs.classList.add('hidden');
+        }
+    }
+
     function hideClockInModal() { document.getElementById('clock-in-modal').classList.add('hidden'); stopCamera(); }
     function hideClockOutModal() { document.getElementById('clock-out-modal').classList.add('hidden'); stopCamera(); }
 
@@ -783,6 +966,19 @@
     async function clockOut(e) {
       e.preventDefault();
       const btn = document.getElementById('btn-submit-clock-out');
+      
+      // Validasi Input Lembur
+      const isOvertime = document.getElementById('check-overtime').checked;
+      const otDuration = document.getElementById('overtime-duration').value;
+      const otReason = document.getElementById('overtime-reason').value;
+
+      if(isOvertime) {
+          if(!otDuration || !otReason) {
+              alert("Mohon isi Durasi dan Alasan Lembur!");
+              return;
+          }
+      }
+
       btn.disabled = true; btn.innerText = "Memproses...";
 
       // FIX: Cari tanggal masuk yang asli (untuk shift malam)
@@ -802,7 +998,11 @@
         location_out: document.getElementById('location-out').value,
         selfie_out_url: document.getElementById('selfie-out-data').value,
         notes_out: document.getElementById('notes-out').value,
-        job_desk_out: currentJobDeskOutCompleted.length + ' tugas selesai'
+        job_desk_out: currentJobDeskOutCompleted.length + ' tugas selesai',
+        // Data Lembur
+        is_overtime: isOvertime,
+        overtime_duration: isOvertime ? otDuration : '',
+        overtime_reason: isOvertime ? otReason : ''
       };
       
       await postData('update', { payload });
