@@ -128,11 +128,24 @@
      </div>
     </div>
 
-    <!-- TAB: Attendance (WITH CASH REPORT) -->
+    <!-- TAB: Attendance (UPDATED WITH LIVE MONITOR) -->
     <div id="manager-tab-attendance" class="tab-content hidden">
+      
+      <!-- LIVE SHIFT MONITOR -->
+      <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 card-shadow mb-8 text-white">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold flex items-center gap-2">📡 Live Shift Monitor <span class="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Hari Ini</span></h2>
+            <div class="text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full" id="monitor-date-display">...</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="shift-monitor-grid">
+            <!-- Will be populated by JS -->
+            <div class="bg-white bg-opacity-10 rounded-xl p-4 animate-pulse">Loading...</div>
+        </div>
+      </div>
+
       <div class="bg-white rounded-2xl p-8 card-shadow">
         <div class="flex flex-wrap justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold text-gray-800">📊 Data Absensi</h2>
+          <h2 class="text-2xl font-bold text-gray-800">📊 Log Absensi Lengkap</h2>
           <div class="flex items-center gap-2">
             <label class="text-sm font-bold text-gray-600">Pilih Tanggal:</label>
             <input type="date" id="manager-att-date" onchange="renderManagerAttendance()" class="p-2 border rounded-xl bg-gray-50">
@@ -509,12 +522,16 @@
       document.getElementById('tab-'+tab).classList.add('active');
       if(tab === 'chat') renderManagerChatEmployeeList();
       if(tab === 'roster') renderRosterGrid();
-      if(tab === 'attendance') renderManagerAttendance();
+      if(tab === 'attendance') {
+          renderManagerAttendance();
+          renderShiftMonitor(); // NEW CALL
+      }
     }
 
     function updateManagerDashboard() {
       renderEmployeeList();
       renderManagerAttendance();
+      renderShiftMonitor(); // NEW CALL
       renderManagerLeaveList();
       const emps = allData.filter(d=>d.type==='employee');
       const atts = allData.filter(d=>d.type==='attendance' && d.attendance_date === getLocalISOString());
@@ -561,6 +578,92 @@
       if(!confirm("Hapus data ini?")) return;
       await postData('delete', { payload: { type, employee_id: id } });
       await initApp(); updateManagerDashboard();
+    }
+
+    // NEW: LIVE SHIFT MONITOR FUNCTION
+    function renderShiftMonitor() {
+        const grid = document.getElementById('shift-monitor-grid');
+        const dateDisplay = document.getElementById('monitor-date-display');
+        const today = getLocalISOString();
+        
+        dateDisplay.innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+
+        // 1. Get Scheduled Roster
+        const rosterToday = allData.filter(d => d.type === 'roster' && d.roster_date === today);
+        
+        // 2. Get Actual Attendance
+        const attendanceToday = allData.filter(d => d.type === 'attendance' && d.attendance_date === today);
+        
+        // 3. Get All Employees (to map positions)
+        const employees = allData.filter(d => d.type === 'employee');
+
+        // 4. Grouping
+        const groups = { 'Pagi': [], 'Siang': [], 'Malam': [], 'Extra': [] };
+
+        // Process Scheduled
+        rosterToday.forEach(r => {
+            if(r.shift_type === 'Off') return;
+            
+            const att = attendanceToday.find(a => a.employee_id === r.employee_id);
+            const emp = employees.find(e => e.employee_id === r.employee_id);
+            
+            groups[r.shift_type].push({
+                name: r.name,
+                position: emp ? emp.position : 'Staff',
+                status: att ? 'Hadir' : 'Belum Hadir',
+                time: att ? att.clock_in_time : '-',
+                isExtra: false
+            });
+        });
+
+        // Process Unscheduled (Extra)
+        attendanceToday.forEach(a => {
+            const isScheduled = rosterToday.some(r => r.employee_id === a.employee_id);
+            if(!isScheduled) {
+                const emp = employees.find(e => e.employee_id === a.employee_id);
+                groups['Extra'].push({
+                    name: a.name,
+                    position: emp ? emp.position : 'Staff',
+                    status: 'Hadir (Luar Jadwal)',
+                    time: a.clock_in_time,
+                    isExtra: true
+                });
+            }
+        });
+
+        // 5. Render HTML
+        grid.innerHTML = '';
+        const shiftColors = { 'Pagi': 'bg-yellow-500', 'Siang': 'bg-orange-500', 'Malam': 'bg-blue-800', 'Extra': 'bg-purple-600' };
+
+        ['Pagi', 'Siang', 'Malam', 'Extra'].forEach(shift => {
+            if(shift === 'Extra' && groups[shift].length === 0) return; // Hide extra if empty
+
+            const items = groups[shift].map(p => `
+                <div class="flex justify-between items-center p-2 mb-1 rounded bg-white bg-opacity-10 border border-white border-opacity-20">
+                    <div>
+                        <div class="font-bold text-sm">${p.name}</div>
+                        <div class="text-xs opacity-75">${p.position}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-bold ${p.status.includes('Hadir') ? 'text-green-300' : 'text-red-300'}">
+                            ${p.status === 'Hadir' ? '✅ Hadir' : (p.status.includes('Luar') ? '⚠️ Extra' : '❌ Belum')}
+                        </div>
+                        <div class="text-[10px]">${p.time}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            grid.innerHTML += `
+                <div class="rounded-xl overflow-hidden bg-black bg-opacity-20 backdrop-blur-sm border border-white border-opacity-10">
+                    <div class="${shiftColors[shift]} p-3 font-bold text-center uppercase tracking-wider text-sm">
+                        ${shift} (${groups[shift].length})
+                    </div>
+                    <div class="p-2 max-h-60 overflow-y-auto">
+                        ${items || '<div class="text-center text-xs opacity-50 py-4">Tidak ada jadwal</div>'}
+                    </div>
+                </div>
+            `;
+        });
     }
 
     // REVISED: MANAGER ATTENDANCE WITH CORRECTION & OVERTIME BADGE & CASH REPORT
