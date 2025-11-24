@@ -1003,6 +1003,13 @@
     function updateJobIn(i, c) { c ? currentJobDeskInCompleted.push(i) : currentJobDeskInCompleted.splice(currentJobDeskInCompleted.indexOf(i), 1); }
     function updateJobOut(i, c) { c ? currentJobDeskOutCompleted.push(i) : currentJobDeskOutCompleted.splice(currentJobDeskOutCompleted.indexOf(i), 1); }
 
+    // === NEW LOGIC: FLEXIBLE SHIFT DETECTION ===
+    function detectShift(hour) {
+        if (hour >= 6 && hour < 14) return 'Pagi';
+        if (hour >= 14 && hour < 22) return 'Siang';
+        return 'Malam'; // 22:00 - 06:00
+    }
+
     async function clockIn(e) {
       e.preventDefault();
       const btn = document.getElementById('btn-submit-clock-in');
@@ -1022,12 +1029,22 @@
       const currentTimeStr = getLocalTimeString();
       const currentHour = parseInt(currentTimeStr.split(':')[0]);
       
+      // AUTO DETECT SHIFT & STATUS
+      // Hapus validasi Roster yang kaku
+      const detectedShift = detectShift(currentHour);
+      let status = 'Tepat Waktu';
+      
+      // Simple logic for late (bisa disesuaikan)
+      if(detectedShift === 'Pagi' && currentHour > 8) status = 'Terlambat';
+      if(detectedShift === 'Siang' && currentHour > 16) status = 'Terlambat';
+      if(detectedShift === 'Malam' && currentHour > 23) status = 'Terlambat'; // (Masuk > jam 23 malam)
+
       const payload = {
         type: 'attendance',
         employee_id: currentUser.employee_id, name: currentUser.name, position: currentUser.position,
         attendance_date: getLocalISOString(),
         clock_in_time: currentTimeStr,
-        attendance_status: currentHour >= 9 ? 'Terlambat' : 'Tepat Waktu',
+        attendance_status: status, // Pakai hasil deteksi baru
         location_in: document.getElementById('location-in').value,
         selfie_in_url: document.getElementById('selfie-in-data').value,
         notes_in: document.getElementById('notes-in').value,
@@ -1038,7 +1055,7 @@
       await postData('create', { payload });
       hideClockInModal();
       await initApp(); updateEmployeeDashboard();
-      showToast("Berhasil Clock In");
+      showToast("Berhasil Clock In (Shift " + detectedShift + ")");
     }
 
     async function clockOut(e) {
