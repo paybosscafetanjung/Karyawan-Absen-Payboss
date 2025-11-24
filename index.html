@@ -87,7 +87,6 @@
       <button onclick="showManagerTab('roster')" id="tab-roster" class="tab-button">📅 Roster</button>
       <button onclick="showManagerTab('report')" id="tab-report" class="tab-button">📈 Laporan</button>
       <button onclick="showManagerTab('leave')" id="tab-leave" class="tab-button">📄 Izin</button>
-      <button onclick="showManagerTab('chat')" id="tab-chat" class="tab-button">💬 Chat</button>
     </div>
    </div>
    <div class="scrollable-content max-w-7xl mx-auto w-full">
@@ -128,7 +127,7 @@
      </div>
     </div>
 
-    <!-- TAB: Attendance (UPDATED WITH LIVE MONITOR) -->
+    <!-- TAB: Attendance (UPDATED WITH LIVE MONITOR & STATUS) -->
     <div id="manager-tab-attendance" class="tab-content hidden">
       
       <!-- LIVE SHIFT MONITOR -->
@@ -138,7 +137,6 @@
             <div class="text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full" id="monitor-date-display">...</div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="shift-monitor-grid">
-            <!-- Will be populated by JS -->
             <div class="bg-white bg-opacity-10 rounded-xl p-4 animate-pulse">Loading...</div>
         </div>
       </div>
@@ -213,19 +211,6 @@
 
     <!-- TAB: Leave -->
     <div id="manager-tab-leave" class="tab-content hidden"><div class="bg-white rounded-2xl p-8 card-shadow"><h2 class="text-2xl font-bold mb-6">📄 Izin Masuk</h2><div id="manager-leave-list" class="space-y-4"></div></div></div>
-    
-    <!-- TAB: Chat -->
-    <div id="manager-tab-chat" class="tab-content hidden">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white rounded-2xl p-6 card-shadow"><h3 class="font-bold mb-4">Karyawan</h3><div id="manager-chat-employee-list" class="space-y-2"></div></div>
-        <div id="manager-chat-room" class="md:col-span-2 bg-white rounded-2xl p-6 card-shadow flex flex-col h-[500px] hidden">
-           <div class="border-b pb-2 mb-4 font-bold text-xl" id="manager-chat-title">Chat</div>
-           <div id="manager-chat-messages" class="flex-1 overflow-y-auto space-y-3 mb-4 p-4 bg-gray-50 rounded-xl"></div>
-           <form onsubmit="sendManagerMessage(event)" class="flex gap-2"><input id="manager-chat-input" class="flex-1 border p-3 rounded-xl" placeholder="Ketik..."><button class="btn-primary text-white px-6 rounded-xl">Kirim</button></form>
-        </div>
-        <div id="manager-chat-placeholder" class="md:col-span-2 bg-white rounded-2xl p-12 card-shadow flex items-center justify-center text-gray-400">Pilih karyawan</div>
-      </div>
-    </div>
    </div>
   </div>
 
@@ -242,7 +227,6 @@
       <button onclick="showEmployeeTab('attendance')" id="emp-tab-attendance" class="tab-button active">Absensi</button>
       <button onclick="showEmployeeTab('roster')" id="emp-tab-roster" class="tab-button">Jadwal</button>
       <button onclick="showEmployeeTab('leave')" id="emp-tab-leave" class="tab-button">Izin</button>
-      <button onclick="showEmployeeTab('chat')" id="emp-tab-chat" class="tab-button">Chat</button>
     </div>
    </div>
    <div class="scrollable-content max-w-7xl mx-auto w-full">
@@ -253,6 +237,16 @@
        <div id="clock-in-card" class="bg-white rounded-2xl p-8 card-shadow text-center"><div class="text-6xl mb-4">🟢</div><h3 class="text-2xl font-bold mb-2">Clock In</h3><button onclick="showClockInModal()" class="w-full btn-success text-white font-bold py-4 rounded-xl text-lg">CLOCK IN</button></div>
        <div id="clock-out-card" class="bg-white rounded-2xl p-8 card-shadow text-center opacity-50 pointer-events-none"><div class="text-6xl mb-4">🔴</div><h3 class="text-2xl font-bold mb-2">Clock Out</h3><button onclick="showClockOutModal()" class="w-full btn-danger text-white font-bold py-4 rounded-xl text-lg">CLOCK OUT</button></div>
       </div>
+      
+      <!-- INFO SESI GANTUNG (JIKA ADA) -->
+      <div id="active-session-alert" class="hidden mb-6 bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4 rounded-xl flex items-center gap-3 shadow-sm">
+          <div class="text-2xl">⚠️</div>
+          <div>
+              <p class="font-bold">Status: Shift Belum Ditutup!</p>
+              <p class="text-sm">Anda memiliki sesi absen yang belum Clock Out. Harap Clock Out terlebih dahulu.</p>
+          </div>
+      </div>
+
       <div class="bg-white rounded-2xl p-8 card-shadow"><h3 class="text-2xl font-bold mb-6">Riwayat</h3><div id="employee-attendance-list" class="space-y-4"></div></div>
      </div>
      <!-- TAB: Roster -->
@@ -269,14 +263,6 @@
             </form>
         </div>
         <div id="employee-leave-list" class="space-y-4"></div>
-     </div>
-     <!-- TAB: Chat -->
-     <div id="employee-tab-chat" class="tab-content hidden">
-        <div class="bg-white rounded-2xl p-6 card-shadow h-[600px] flex flex-col">
-            <div class="border-b pb-2 mb-4 font-bold text-xl">Chat dengan Manager</div>
-            <div id="employee-chat-messages" class="flex-1 overflow-y-auto space-y-3 mb-4 p-4 bg-gray-50 rounded-xl"></div>
-            <form onsubmit="sendEmployeeMessage(event)" class="flex gap-2"><input id="employee-chat-input" class="flex-1 border p-3 rounded-xl outline-none focus:border-green-500" placeholder="Ketik pesan..."><button class="btn-success text-white px-6 rounded-xl font-bold">Kirim</button></form>
-        </div>
      </div>
     </div>
    </div>
@@ -393,6 +379,20 @@
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(number);
     }
 
+    // === SHIFT TIME RULES (FOR TOLERANCE CALCULATION) ===
+    // Format: HH:MM integer values. Tolerance is 15 mins.
+    const SHIFT_RULES = {
+        'Pagi': { start_h: 8, start_m: 0, end_h: 16, end_m: 0 },
+        'Siang': { start_h: 16, start_m: 0, end_h: 23, end_m: 0 },
+        'Malam': { start_h: 23, start_m: 0, end_h: 8, end_m: 0 } // Crosses day
+    };
+
+    function timeToMinutes(timeStr) {
+        if(!timeStr) return 0;
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+    }
+
     // ROSTER VARS
     let currentRosterWeekOffset = 0;
     const SHIFT_TYPES = ['Off', 'Pagi', 'Siang', 'Malam'];
@@ -410,7 +410,7 @@
         'Pramusaji': 5
     };
 
-    let allData = [], currentUser = null, currentChatEmployee = null;
+    let allData = [], currentUser = null; // Chat vars removed
     let currentJobDeskInCompleted = [], currentJobDeskOutCompleted = [];
     let mediaStream = null;
 
@@ -514,24 +514,24 @@
 
     // --- MANAGER ---
     function showManagerTab(tab) {
-      ['employees','attendance','roster','leave','chat', 'report'].forEach(t => {
+      ['employees','attendance','roster','leave', 'report'].forEach(t => {
         document.getElementById('manager-tab-'+t).classList.add('hidden');
         document.getElementById('tab-'+t).classList.remove('active');
       });
       document.getElementById('manager-tab-'+tab).classList.remove('hidden');
       document.getElementById('tab-'+tab).classList.add('active');
-      if(tab === 'chat') renderManagerChatEmployeeList();
+      
       if(tab === 'roster') renderRosterGrid();
       if(tab === 'attendance') {
           renderManagerAttendance();
-          renderShiftMonitor(); // NEW CALL
+          renderShiftMonitor();
       }
     }
 
     function updateManagerDashboard() {
       renderEmployeeList();
       renderManagerAttendance();
-      renderShiftMonitor(); // NEW CALL
+      renderShiftMonitor();
       renderManagerLeaveList();
       const emps = allData.filter(d=>d.type==='employee');
       const atts = allData.filter(d=>d.type==='attendance' && d.attendance_date === getLocalISOString());
@@ -674,12 +674,18 @@
       const atts = allData.filter(d => d.type==='attendance' && d.attendance_date === filterDate);
       
       if(atts.length===0) list.innerHTML = '<p class="text-center text-gray-400 py-4">Tidak ada data absensi pada tanggal ini.</p>';
-      else list.innerHTML = atts.map(a => `
+      else list.innerHTML = atts.map(a => {
+        // Determine status style
+        const isLate = a.attendance_status && a.attendance_status.toLowerCase().includes('telat');
+        const isEarly = a.attendance_status && a.attendance_status.toLowerCase().includes('cepat');
+        const statusColor = (isLate || isEarly) ? 'bg-red-100 text-red-800' : 'bg-purple-100 text-purple-800';
+
+        return `
         <div class="bg-white p-4 rounded-xl border mb-3 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
           <div class="flex-1">
              <div class="flex items-center gap-2 mb-1">
                 <span class="text-lg font-bold">${a.name}</span>
-                <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded font-bold">${a.attendance_status}</span>
+                <span class="text-xs ${statusColor} px-2 py-1 rounded font-bold">${a.attendance_status}</span>
                 ${a.is_overtime ? `<span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded font-bold border border-orange-200">🔥 Lembur ${a.overtime_duration} Jam</span>` : ''}
              </div>
              <div class="text-sm text-gray-600 grid grid-cols-2 gap-2">
@@ -705,7 +711,32 @@
             ✏️ Koreksi
           </button>
         </div>
+      `;
+      }).join('');
+    }
+
+    function renderManagerLeaveList() {
+      const list = document.getElementById('manager-leave-list');
+      const leaves = allData.filter(d=>d.type==='leave');
+      list.innerHTML = leaves.map(l => `
+        <div class="bg-white p-4 border rounded-xl mb-2">
+          <div class="flex justify-between font-bold"><span>${l.name}</span><span class="text-${l.status==='Pending'?'yellow':'green'}-600">${l.status}</span></div>
+          <p class="text-sm">${l.leave_type}: ${l.start_date}</p>
+          <p class="text-xs text-gray-500 mb-2">${l.reason}</p>
+          ${l.status === 'Pending' ? `
+            <div class="flex gap-2">
+              <button onclick="approveLeave('${l.employee_id}', '${l.start_date}', 'Disetujui')" class="bg-green-500 text-white px-3 py-1 rounded text-xs">Terima</button>
+              <button onclick="approveLeave('${l.employee_id}', '${l.start_date}', 'Ditolak')" class="bg-red-500 text-white px-3 py-1 rounded text-xs">Tolak</button>
+            </div>
+          ` : ''}
+        </div>
       `).join('');
+    }
+
+    async function approveLeave(id, date, status) {
+      const payload = { type: 'leave', employee_id: id, start_date: date, status: status, approved_by: 'Manager', approved_at: new Date().toISOString() };
+      await postData('update', { payload });
+      await initApp(); updateManagerDashboard();
     }
 
     // REPORTING LOGIC
@@ -777,12 +808,409 @@
         }).join('');
     }
 
-    function timeToMinutes(timeStr) {
-        if(!timeStr) return 0;
-        const [h, m] = timeStr.split(':').map(Number);
-        return (h * 60) + m;
+    // CLOCK IN/OUT (FIXED LOGIC FOR NIGHT SHIFT + CASH INPUT FOR KASIR + STATUS TOLERANCE)
+    
+    function showClockInModal() { 
+        document.getElementById('clock-in-modal').classList.remove('hidden'); 
+        initCamera('in');
+        const list = JOB_DESKS[currentUser.position]?.start || [];
+        document.getElementById('job-desk-start').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobIn(${i},this.checked)"> ${t}</label>`).join('');
+        currentJobDeskInCompleted = [];
+
+        // Show Cash Input if Kasir
+        const cashInput = document.getElementById('cash-in-input-group');
+        if (currentUser.position === 'Kasir') {
+            cashInput.classList.remove('hidden');
+            document.getElementById('cash-in-amount').value = ''; // Reset value
+        } else {
+            cashInput.classList.add('hidden');
+        }
     }
 
+    function showClockOutModal() { 
+        document.getElementById('clock-out-modal').classList.remove('hidden'); 
+        initCamera('out'); 
+        // Reset Overtime Form
+        document.getElementById('check-overtime').checked = false;
+        document.getElementById('overtime-inputs').classList.add('hidden');
+        document.getElementById('overtime-duration').value = '';
+        document.getElementById('overtime-reason').value = '';
+        
+        const list = JOB_DESKS[currentUser.position]?.end || [];
+        document.getElementById('job-desk-end').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobOut(${i},this.checked)"> ${t}</label>`).join('');
+        currentJobDeskOutCompleted = [];
+
+        // Show Cash Input if Kasir
+        const cashInput = document.getElementById('cash-out-input-group');
+        if (currentUser.position === 'Kasir') {
+            cashInput.classList.remove('hidden');
+            document.getElementById('cash-out-amount').value = ''; // Reset value
+        } else {
+            cashInput.classList.add('hidden');
+        }
+    }
+    
+    function toggleOvertimeInput(checkbox) {
+        const inputs = document.getElementById('overtime-inputs');
+        if(checkbox.checked) {
+            inputs.classList.remove('hidden');
+        } else {
+            inputs.classList.add('hidden');
+        }
+    }
+
+    function hideClockInModal() { document.getElementById('clock-in-modal').classList.add('hidden'); stopCamera(); }
+    function hideClockOutModal() { document.getElementById('clock-out-modal').classList.add('hidden'); stopCamera(); }
+
+    function updateJobIn(i, c) { c ? currentJobDeskInCompleted.push(i) : currentJobDeskInCompleted.splice(currentJobDeskInCompleted.indexOf(i), 1); }
+    function updateJobOut(i, c) { c ? currentJobDeskOutCompleted.push(i) : currentJobDeskOutCompleted.splice(currentJobDeskOutCompleted.indexOf(i), 1); }
+
+    // === NEW LOGIC: FLEXIBLE SHIFT DETECTION ===
+    function detectShift(hour) {
+        if (hour >= 6 && hour < 14) return 'Pagi';
+        if (hour >= 14 && hour < 22) return 'Siang';
+        return 'Malam'; // 22:00 - 06:00
+    }
+
+    function calculateLateStatus(shift, clockInTimeStr) {
+        if (!clockInTimeStr) return "Tidak Diketahui";
+        const rule = SHIFT_RULES[shift];
+        if (!rule) return "Tepat Waktu"; // Fallback
+
+        const [hIn, mIn] = clockInTimeStr.split(':').map(Number);
+        let inMins = hIn * 60 + mIn;
+        
+        let targetMins = rule.start_h * 60 + rule.start_m;
+        // Tolerance is 15 mins
+        let toleranceLimit = targetMins + 15;
+
+        // Special Case: Shift Malam (Start 23:00)
+        // If employee enters at 00:10, logic needs adjustment.
+        // Assume shift Malam starts previous day if clocking in late night or very early morning.
+        if (shift === 'Malam') {
+             // If In time is early morning (e.g., 00:05), treat as next day > add 24h to target? No, treat input as linear time.
+             // Simpler: Convert "Late Night" times to > 24h scale if needed, OR just compare normally.
+             // Start 23:00. Late limit 23:15.
+             // If In is 00:30 (next day), that's DEFINITELY late.
+             // Logic: If hour < 12 (early morning), add 24h to time for comparison.
+             if (hIn < 12) inMins += 24 * 60; 
+        }
+
+        if (inMins > toleranceLimit) {
+            const lateMins = inMins - targetMins;
+            return `Terlambat (${lateMins} mnt)`;
+        }
+        return "Tepat Waktu";
+    }
+
+    function calculateEarlyLeaveStatus(shift, clockOutTimeStr, existingStatus) {
+        if (!clockOutTimeStr) return existingStatus;
+        const rule = SHIFT_RULES[shift];
+        if (!rule) return existingStatus;
+
+        const [hOut, mOut] = clockOutTimeStr.split(':').map(Number);
+        let outMins = hOut * 60 + mOut;
+        
+        let targetEndMins = rule.end_h * 60 + rule.end_m;
+        
+        // Shift Malam ends at 08:00 (next day). 
+        // Logic: If Shift is Malam, target is 8:00 (which is just 480 mins).
+        // But employee started previous day. 
+        // Just use standard linear day time for comparison if we assume they clock out in the morning.
+        // If they clock out at 23:00 previous day? That's super early leave.
+        // Assume Out time is on the correct "day side".
+        // If Shift is Malam (Ends 8:00) and Out is > 12:00 (e.g. 23:30), treat as Previous Day -> Subtract 24h? No.
+        // Easiest: If shift is Malam and Out > 15:00, treat as 'previous day' relative to 8:00? 
+        // Standard: Shift Malam ends 08:00. Early leave if < 07:45.
+        // If someone leaves at 07:00 -> Early.
+        
+        // Tolerance: 15 mins BEFORE end.
+        let toleranceLimit = targetEndMins - 15; 
+        
+        // Special handling for Malam crossing midnight logic if output is e.g. 06:00
+        if (shift === 'Malam') {
+             // Target 8:00. Limit 7:45.
+             // If out is 07:00 -> 420 < 465 -> Early. Correct.
+        } else if (shift === 'Siang') {
+             // Target 23:00. Limit 22:45.
+             // If out is 00:30 (next day), treat as > 24h.
+             if (hOut < 12) outMins += 24 * 60;
+        }
+
+        if (outMins < toleranceLimit) {
+            return `${existingStatus} & Pulang Cepat`;
+        }
+        return existingStatus;
+    }
+
+    async function clockIn(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-clock-in');
+      
+      // Validasi Uang Kasir
+      let cashStart = '';
+      if (currentUser.position === 'Kasir') {
+          cashStart = document.getElementById('cash-in-amount').value;
+          if (!cashStart) {
+              alert("Wajib mengisi jumlah uang di brangkas!");
+              return;
+          }
+      }
+
+      btn.disabled = true; btn.innerText = "Memproses...";
+      
+      const currentTimeStr = getLocalTimeString();
+      const currentHour = parseInt(currentTimeStr.split(':')[0]);
+      
+      // AUTO DETECT SHIFT & STATUS
+      const detectedShift = detectShift(currentHour);
+      
+      // NEW: Calculate precise Late Status
+      const status = calculateLateStatus(detectedShift, currentTimeStr);
+
+      const payload = {
+        type: 'attendance',
+        employee_id: currentUser.employee_id, name: currentUser.name, position: currentUser.position,
+        attendance_date: getLocalISOString(),
+        clock_in_time: currentTimeStr,
+        attendance_status: status, 
+        shift_type: detectedShift, // Store detected shift for Clock Out reference
+        location_in: document.getElementById('location-in').value,
+        selfie_in_url: document.getElementById('selfie-in-data').value,
+        notes_in: document.getElementById('notes-in').value,
+        job_desk_in: currentJobDeskInCompleted.length + ' tugas selesai',
+        cash_in_hand_start: cashStart 
+      };
+      
+      await postData('create', { payload });
+      hideClockInModal();
+      await initApp(); updateEmployeeDashboard();
+      showToast("Berhasil Clock In (Shift " + detectedShift + ")");
+    }
+
+    async function clockOut(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-clock-out');
+      
+      // Validasi Input Lembur & Cash
+      const isOvertime = document.getElementById('check-overtime').checked;
+      const otDuration = document.getElementById('overtime-duration').value;
+      const otReason = document.getElementById('overtime-reason').value;
+
+      if(isOvertime) {
+          if(!otDuration || !otReason) {
+              alert("Mohon isi Durasi dan Alasan Lembur!");
+              return;
+          }
+      }
+
+      let cashEnd = '';
+      if (currentUser.position === 'Kasir') {
+          cashEnd = document.getElementById('cash-out-amount').value;
+          if (!cashEnd) {
+              alert("Wajib mengisi jumlah uang akhir di brangkas!");
+              return;
+          }
+      }
+
+      btn.disabled = true; btn.innerText = "Memproses...";
+
+      // FIX: Cari tanggal masuk yang asli
+      const myPendingAttendance = allData.find(d => 
+          d.type === 'attendance' && 
+          d.employee_id === currentUser.employee_id && 
+          (!d.clock_out_time || d.clock_out_time === '')
+      );
+
+      const targetDate = myPendingAttendance ? myPendingAttendance.attendance_date : getLocalISOString();
+      
+      // NEW: Retrieve shift info to calculate Early Leave
+      const shift = myPendingAttendance ? (myPendingAttendance.shift_type || 'Pagi') : 'Pagi';
+      const currentStatus = myPendingAttendance ? myPendingAttendance.attendance_status : 'Tepat Waktu';
+      const outTime = getLocalTimeString();
+      
+      // Calculate Final Status (Append Early Leave if needed)
+      const finalStatus = calculateEarlyLeaveStatus(shift, outTime, currentStatus);
+
+      const payload = {
+        type: 'attendance',
+        employee_id: currentUser.employee_id,
+        attendance_date: targetDate, 
+        clock_out_time: outTime,
+        attendance_status: finalStatus, // Update status with early leave info
+        location_out: document.getElementById('location-out').value,
+        selfie_out_url: document.getElementById('selfie-out-data').value,
+        notes_out: document.getElementById('notes-out').value,
+        job_desk_out: currentJobDeskOutCompleted.length + ' tugas selesai',
+        is_overtime: isOvertime,
+        overtime_duration: isOvertime ? otDuration : '',
+        overtime_reason: isOvertime ? otReason : '',
+        cash_in_hand_end: cashEnd 
+      };
+      
+      await postData('update', { payload });
+      hideClockOutModal();
+      await initApp(); updateEmployeeDashboard();
+      showToast("Berhasil Clock Out");
+    }
+
+    // CAMERA & GPS
+    async function initCamera(type) {
+        try {
+            if(mediaStream) mediaStream.getTracks().forEach(t=>t.stop());
+            mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            document.getElementById('video-'+type).srcObject = mediaStream;
+            document.getElementById('video-'+type).classList.remove('hidden');
+            document.getElementById('photo-'+type).classList.add('hidden');
+        } catch(e){ showToast("Kamera Error","error"); }
+    }
+    function takeSnapshot(type) {
+        const v = document.getElementById('video-'+type);
+        const c = document.getElementById('canvas-'+type);
+        c.width = v.videoWidth; c.height = v.videoHeight;
+        c.getContext('2d').drawImage(v,0,0);
+        const data = c.toDataURL('image/jpeg');
+        document.getElementById('selfie-'+type+'-data').value = data;
+        document.getElementById('photo-'+type).src = data;
+        document.getElementById('photo-'+type).classList.remove('hidden');
+        v.classList.add('hidden');
+    }
+    function stopCamera() { if(mediaStream) mediaStream.getTracks().forEach(t=>t.stop()); }
+
+    function getLocation(type) {
+        const status = document.getElementById('gps-status-'+type);
+        const btn = document.getElementById('btn-submit-clock-'+type);
+        status.classList.remove('hidden'); status.innerText = "Mendeteksi...";
+        
+        navigator.geolocation.getCurrentPosition(pos => {
+            const dist = getDist(pos.coords.latitude, pos.coords.longitude, TARGET_LAT, TARGET_LON);
+            document.getElementById('location-'+type).value = `${pos.coords.latitude},${pos.coords.longitude} (${Math.round(dist)}m)`;
+            
+            if (dist <= MAX_RADIUS_METERS) {
+                status.innerText = "✅ Lokasi Valid"; status.className = "mb-2 p-2 bg-green-100 text-green-800 rounded text-center font-bold";
+                btn.disabled = false; btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                btn.classList.add(type==='in'?'bg-green-600':'bg-red-600');
+                btn.innerText = "SUBMIT";
+            } else {
+                status.innerText = `❌ Diluar Radius (${Math.round(dist)}m)`; status.className = "mb-2 p-2 bg-red-100 text-red-800 rounded text-center font-bold";
+                btn.disabled = true;
+            }
+        });
+    }
+    
+    function getDist(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; 
+        const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+        const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
+        const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2) * Math.sin(Δλ/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // UPDATED: LOGIC DASHBOARD KARYAWAN UNTUK SHIFT LINTAS HARI
+    function updateEmployeeDashboard() {
+      const myAtt = allData.filter(d => d.type === 'attendance' && d.employee_id === currentUser.employee_id);
+      
+      // 1. Cari Sesi Aktif (Gantung) - Prioritas Utama
+      // Cari data yang clock_out-nya masih kosong (undefined atau string kosong)
+      const openSession = myAtt.find(d => !d.clock_out_time || d.clock_out_time === '');
+      
+      const inCard = document.getElementById('clock-in-card');
+      const outCard = document.getElementById('clock-out-card');
+      const alertBox = document.getElementById('active-session-alert');
+      
+      // Reset classes
+      inCard.classList.remove('opacity-50','pointer-events-none');
+      outCard.classList.remove('opacity-50','pointer-events-none');
+      alertBox.classList.add('hidden');
+
+      if (openSession) {
+         // Ada sesi gantung (baik hari ini atau kemarin) -> WAJIB CLOCK OUT DULU
+         inCard.classList.add('opacity-50','pointer-events-none'); // Matikan Clock In
+         outCard.classList.remove('opacity-50','pointer-events-none'); // Nyalakan Clock Out
+         
+         // Tampilkan Alert Warning
+         alertBox.classList.remove('hidden');
+      } else {
+         // Tidak ada sesi gantung (Semua sudah closed atau belum absen)
+         // Logika lama: Satu hari satu absen.
+         const today = getLocalISOString();
+         const todayAtt = myAtt.find(a => a.attendance_date === today);
+         
+         if (todayAtt) {
+             // Sudah absen hari ini dan sudah pulang -> Matikan semua (Selesai tugas hari ini)
+             inCard.classList.add('opacity-50','pointer-events-none');
+             outCard.classList.add('opacity-50','pointer-events-none');
+         } else {
+             // Belum absen hari ini -> Nyalakan Clock In
+             inCard.classList.remove('opacity-50','pointer-events-none');
+             outCard.classList.add('opacity-50','pointer-events-none');
+         }
+      }
+      
+      // Render List (Urutkan dari yang terbaru: kombinasi tanggal + jam)
+      myAtt.sort((a, b) => {
+          const timeA = a.attendance_date + 'T' + (a.clock_in_time || '00:00');
+          const timeB = b.attendance_date + 'T' + (b.clock_in_time || '00:00');
+          return new Date(timeB) - new Date(timeA);
+      });
+      
+      document.getElementById('employee-attendance-list').innerHTML = myAtt.map(a => {
+        const isLate = a.attendance_status && a.attendance_status.toLowerCase().includes('telat');
+        const isEarly = a.attendance_status && a.attendance_status.toLowerCase().includes('cepat');
+        const color = (isLate || isEarly) ? 'text-red-600' : 'text-green-600';
+        
+        return `
+        <div class="bg-white p-4 border rounded-xl mb-2 shadow-sm">
+           <div class="flex justify-between font-bold"><span>${a.attendance_date}</span><span class="${color} text-sm">${a.attendance_status || '-'}</span></div>
+           <div class="text-sm mt-1">In: ${a.clock_in_time} | Out: ${a.clock_out_time || '-'}</div>
+        </div>
+      `;
+      }).join('');
+    }
+
+    // EMPLOYEE LOGIC
+    function showEmployeeTab(tab) {
+      ['attendance','roster','leave'].forEach(t => {
+        document.getElementById('employee-tab-'+t).classList.add('hidden');
+        document.getElementById('emp-tab-'+t).classList.remove('active');
+      });
+      document.getElementById('employee-tab-'+tab).classList.remove('hidden');
+      document.getElementById('emp-tab-'+tab).classList.add('active');
+      if(tab==='roster') renderEmployeeRoster();
+      if(tab==='leave') renderEmployeeLeaveList();
+    }
+
+    function renderEmployeeRoster() {
+      const rosters = allData.filter(d => d.type === 'roster' && d.employee_id === currentUser.employee_id);
+      document.getElementById('employee-roster-list').innerHTML = rosters.map(r => `
+        <div class="bg-purple-50 p-4 rounded-xl text-center border border-purple-100"><div class="font-bold text-lg">${r.roster_date}</div><div class="text-purple-600 font-bold">${r.shift_type}</div></div>
+      `).join('');
+    }
+
+    async function submitLeaveRequest(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-leave');
+      btn.disabled = true; btn.innerText = "Mengirim...";
+      const payload = {
+        type: 'leave', employee_id: currentUser.employee_id, name: currentUser.name, position: currentUser.position,
+        leave_type: document.getElementById('leave-type').value,
+        start_date: document.getElementById('leave-start-date').value,
+        end_date: document.getElementById('leave-end-date').value,
+        reason: document.getElementById('leave-reason').value,
+        status: 'Pending'
+      };
+      await postData('create', { payload });
+      showToast("Izin diajukan");
+      btn.disabled = false; btn.innerText = "Kirim Pengajuan";
+      await initApp(); renderEmployeeLeaveList();
+    }
+
+    function renderEmployeeLeaveList() {
+      const leaves = allData.filter(d => d.type === 'leave' && d.employee_id === currentUser.employee_id);
+      document.getElementById('employee-leave-list').innerHTML = leaves.map(l => `
+        <div class="bg-white p-4 border rounded-xl mb-2"><p class="font-bold">${l.leave_type} <span class="text-gray-500 text-xs">(${l.status})</span></p><p class="text-xs">${l.start_date} s/d ${l.end_date}</p></div>
+      `).join('');
+    }
 
     // NEW: CORRECTION LOGIC
     function openCorrectionModal(empId, date) {
@@ -822,31 +1250,6 @@
         
         await initApp();
         renderManagerAttendance();
-    }
-
-
-    function renderManagerLeaveList() {
-      const list = document.getElementById('manager-leave-list');
-      const leaves = allData.filter(d=>d.type==='leave');
-      list.innerHTML = leaves.map(l => `
-        <div class="bg-white p-4 border rounded-xl mb-2">
-          <div class="flex justify-between font-bold"><span>${l.name}</span><span class="text-${l.status==='Pending'?'yellow':'green'}-600">${l.status}</span></div>
-          <p class="text-sm">${l.leave_type}: ${l.start_date}</p>
-          <p class="text-xs text-gray-500 mb-2">${l.reason}</p>
-          ${l.status === 'Pending' ? `
-            <div class="flex gap-2">
-              <button onclick="approveLeave('${l.employee_id}', '${l.start_date}', 'Disetujui')" class="bg-green-500 text-white px-3 py-1 rounded text-xs">Terima</button>
-              <button onclick="approveLeave('${l.employee_id}', '${l.start_date}', 'Ditolak')" class="bg-red-500 text-white px-3 py-1 rounded text-xs">Tolak</button>
-            </div>
-          ` : ''}
-        </div>
-      `).join('');
-    }
-
-    async function approveLeave(id, date, status) {
-      const payload = { type: 'leave', employee_id: id, start_date: date, status: status, approved_by: 'Manager', approved_at: new Date().toISOString() };
-      await postData('update', { payload });
-      await initApp(); updateManagerDashboard();
     }
 
     // ROSTER GRID
@@ -926,351 +1329,6 @@
       allData = allData.filter(d => !(d.type === 'roster' && d.employee_id === empId && d.roster_date === date));
       allData.push(payload);
       renderRosterGrid();
-    }
-
-    // MANAGER CHAT
-    function renderManagerChatEmployeeList() {
-      const emps = allData.filter(d=>d.type==='employee');
-      document.getElementById('manager-chat-employee-list').innerHTML = emps.map(e => `
-        <div onclick="openManagerChat('${e.employee_id}', '${e.name}')" class="p-3 border rounded-xl cursor-pointer hover:bg-purple-50 transition">
-           <p class="font-bold">${e.name}</p><p class="text-xs text-gray-500">${e.position}</p>
-        </div>
-      `).join('');
-    }
-
-    function openManagerChat(id, name) {
-      currentChatEmployee = { id, name };
-      document.getElementById('manager-chat-placeholder').classList.add('hidden');
-      document.getElementById('manager-chat-room').classList.remove('hidden');
-      document.getElementById('manager-chat-title').innerText = name;
-      renderManagerChatMessages();
-    }
-
-    function renderManagerChatMessages() {
-      if(!currentChatEmployee) return;
-      const msgs = allData.filter(d => d.type==='chat' && ((d.sender_id==='manager' && d.receiver_id===currentChatEmployee.id) || (d.sender_id===currentChatEmployee.id && d.receiver_id==='manager')));
-      msgs.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-      const container = document.getElementById('manager-chat-messages');
-      container.innerHTML = msgs.map(m => `<div class="flex ${m.sender_id==='manager'?'justify-end':'justify-start'}"><div class="${m.sender_id==='manager'?'bg-purple-600 text-white':'bg-gray-200 text-gray-800'} px-4 py-2 rounded-xl text-sm max-w-xs">${m.message}</div></div>`).join('');
-      container.scrollTop = container.scrollHeight;
-    }
-
-    async function sendManagerMessage(e) {
-      e.preventDefault();
-      const input = document.getElementById('manager-chat-input');
-      const payload = { type: 'chat', sender_id: 'manager', sender_name: 'Manager', receiver_id: currentChatEmployee.id, receiver_name: currentChatEmployee.name, message: input.value, timestamp: new Date().toISOString(), is_read: false };
-      await postData('create', { payload });
-      input.value = '';
-      await initApp(); renderManagerChatMessages();
-    }
-
-    // EMPLOYEE LOGIC
-    function showEmployeeTab(tab) {
-      ['attendance','roster','leave','chat'].forEach(t => {
-        document.getElementById('employee-tab-'+t).classList.add('hidden');
-        document.getElementById('emp-tab-'+t).classList.remove('active');
-      });
-      document.getElementById('employee-tab-'+tab).classList.remove('hidden');
-      document.getElementById('emp-tab-'+tab).classList.add('active');
-      if(tab==='roster') renderEmployeeRoster();
-      if(tab==='leave') renderEmployeeLeaveList();
-      if(tab==='chat') renderEmployeeChatMessages();
-    }
-
-    function updateEmployeeDashboard() {
-      const myAtt = allData.filter(d => d.type === 'attendance' && d.employee_id === currentUser.employee_id);
-      const today = getLocalISOString();
-      const att = myAtt.find(a => a.attendance_date === today);
-      
-      const inCard = document.getElementById('clock-in-card');
-      const outCard = document.getElementById('clock-out-card');
-      
-      if(att) {
-         if(att.clock_out_time) { inCard.classList.add('opacity-50','pointer-events-none'); outCard.classList.add('opacity-50','pointer-events-none'); }
-         else { inCard.classList.add('opacity-50','pointer-events-none'); outCard.classList.remove('opacity-50','pointer-events-none'); }
-      } else {
-         inCard.classList.remove('opacity-50','pointer-events-none');
-         outCard.classList.add('opacity-50','pointer-events-none');
-      }
-      
-      document.getElementById('employee-attendance-list').innerHTML = myAtt.map(a => `
-        <div class="bg-white p-4 border rounded-xl mb-2 shadow-sm">
-           <div class="flex justify-between font-bold"><span>${a.attendance_date}</span><span>${a.attendance_status}</span></div>
-           <div class="text-sm mt-1">In: ${a.clock_in_time} | Out: ${a.clock_out_time || '-'}</div>
-        </div>
-      `).join('');
-    }
-
-    function renderEmployeeRoster() {
-      const rosters = allData.filter(d => d.type === 'roster' && d.employee_id === currentUser.employee_id);
-      document.getElementById('employee-roster-list').innerHTML = rosters.map(r => `
-        <div class="bg-purple-50 p-4 rounded-xl text-center border border-purple-100"><div class="font-bold text-lg">${r.roster_date}</div><div class="text-purple-600 font-bold">${r.shift_type}</div></div>
-      `).join('');
-    }
-
-    async function submitLeaveRequest(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btn-submit-leave');
-      btn.disabled = true; btn.innerText = "Mengirim...";
-      const payload = {
-        type: 'leave', employee_id: currentUser.employee_id, name: currentUser.name, position: currentUser.position,
-        leave_type: document.getElementById('leave-type').value,
-        start_date: document.getElementById('leave-start-date').value,
-        end_date: document.getElementById('leave-end-date').value,
-        reason: document.getElementById('leave-reason').value,
-        status: 'Pending'
-      };
-      await postData('create', { payload });
-      showToast("Izin diajukan");
-      btn.disabled = false; btn.innerText = "Kirim Pengajuan";
-      await initApp(); renderEmployeeLeaveList();
-    }
-
-    function renderEmployeeLeaveList() {
-      const leaves = allData.filter(d => d.type === 'leave' && d.employee_id === currentUser.employee_id);
-      document.getElementById('employee-leave-list').innerHTML = leaves.map(l => `
-        <div class="bg-white p-4 border rounded-xl mb-2"><p class="font-bold">${l.leave_type} <span class="text-gray-500 text-xs">(${l.status})</span></p><p class="text-xs">${l.start_date} s/d ${l.end_date}</p></div>
-      `).join('');
-    }
-
-    function renderEmployeeChatMessages() {
-      const msgs = allData.filter(d => d.type==='chat' && ((d.sender_id===currentUser.employee_id && d.receiver_id==='manager') || (d.sender_id==='manager' && d.receiver_id===currentUser.employee_id)));
-      msgs.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-      const container = document.getElementById('employee-chat-messages');
-      container.innerHTML = msgs.map(m => `<div class="flex ${m.sender_id===currentUser.employee_id?'justify-end':'justify-start'}"><div class="${m.sender_id===currentUser.employee_id?'bg-green-600 text-white':'bg-gray-200 text-gray-800'} px-4 py-2 rounded-xl text-sm max-w-xs">${m.message}</div></div>`).join('');
-      container.scrollTop = container.scrollHeight;
-    }
-
-    async function sendEmployeeMessage(e) {
-      e.preventDefault();
-      const input = document.getElementById('employee-chat-input');
-      const payload = { type: 'chat', sender_id: currentUser.employee_id, sender_name: currentUser.name, receiver_id: 'manager', receiver_name: 'Manager', message: input.value, timestamp: new Date().toISOString(), is_read: false };
-      await postData('create', { payload });
-      input.value = '';
-      await initApp(); renderEmployeeChatMessages();
-    }
-
-    // CLOCK IN/OUT (FIXED LOGIC FOR NIGHT SHIFT + CASH INPUT FOR KASIR)
-    function showClockInModal() { 
-        document.getElementById('clock-in-modal').classList.remove('hidden'); 
-        initCamera('in');
-        const list = JOB_DESKS[currentUser.position]?.start || [];
-        document.getElementById('job-desk-start').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobIn(${i},this.checked)"> ${t}</label>`).join('');
-        currentJobDeskInCompleted = [];
-
-        // Show Cash Input if Kasir
-        const cashInput = document.getElementById('cash-in-input-group');
-        if (currentUser.position === 'Kasir') {
-            cashInput.classList.remove('hidden');
-            document.getElementById('cash-in-amount').value = ''; // Reset value
-        } else {
-            cashInput.classList.add('hidden');
-        }
-    }
-
-    function showClockOutModal() { 
-        document.getElementById('clock-out-modal').classList.remove('hidden'); 
-        initCamera('out'); 
-        // Reset Overtime Form
-        document.getElementById('check-overtime').checked = false;
-        document.getElementById('overtime-inputs').classList.add('hidden');
-        document.getElementById('overtime-duration').value = '';
-        document.getElementById('overtime-reason').value = '';
-        
-        const list = JOB_DESKS[currentUser.position]?.end || [];
-        document.getElementById('job-desk-end').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobOut(${i},this.checked)"> ${t}</label>`).join('');
-        currentJobDeskOutCompleted = [];
-
-        // Show Cash Input if Kasir
-        const cashInput = document.getElementById('cash-out-input-group');
-        if (currentUser.position === 'Kasir') {
-            cashInput.classList.remove('hidden');
-            document.getElementById('cash-out-amount').value = ''; // Reset value
-        } else {
-            cashInput.classList.add('hidden');
-        }
-    }
-    
-    function toggleOvertimeInput(checkbox) {
-        const inputs = document.getElementById('overtime-inputs');
-        if(checkbox.checked) {
-            inputs.classList.remove('hidden');
-        } else {
-            inputs.classList.add('hidden');
-        }
-    }
-
-    function hideClockInModal() { document.getElementById('clock-in-modal').classList.add('hidden'); stopCamera(); }
-    function hideClockOutModal() { document.getElementById('clock-out-modal').classList.add('hidden'); stopCamera(); }
-
-    function updateJobIn(i, c) { c ? currentJobDeskInCompleted.push(i) : currentJobDeskInCompleted.splice(currentJobDeskInCompleted.indexOf(i), 1); }
-    function updateJobOut(i, c) { c ? currentJobDeskOutCompleted.push(i) : currentJobDeskOutCompleted.splice(currentJobDeskOutCompleted.indexOf(i), 1); }
-
-    // === NEW LOGIC: FLEXIBLE SHIFT DETECTION ===
-    function detectShift(hour) {
-        if (hour >= 6 && hour < 14) return 'Pagi';
-        if (hour >= 14 && hour < 22) return 'Siang';
-        return 'Malam'; // 22:00 - 06:00
-    }
-
-    async function clockIn(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btn-submit-clock-in');
-      
-      // Validasi Uang Kasir
-      let cashStart = '';
-      if (currentUser.position === 'Kasir') {
-          cashStart = document.getElementById('cash-in-amount').value;
-          if (!cashStart) {
-              alert("Wajib mengisi jumlah uang di brangkas!");
-              return;
-          }
-      }
-
-      btn.disabled = true; btn.innerText = "Memproses...";
-      
-      const currentTimeStr = getLocalTimeString();
-      const currentHour = parseInt(currentTimeStr.split(':')[0]);
-      
-      // AUTO DETECT SHIFT & STATUS
-      // Hapus validasi Roster yang kaku
-      const detectedShift = detectShift(currentHour);
-      let status = 'Tepat Waktu';
-      
-      // Simple logic for late (bisa disesuaikan)
-      if(detectedShift === 'Pagi' && currentHour > 8) status = 'Terlambat';
-      if(detectedShift === 'Siang' && currentHour > 16) status = 'Terlambat';
-      if(detectedShift === 'Malam' && currentHour > 23) status = 'Terlambat'; // (Masuk > jam 23 malam)
-
-      const payload = {
-        type: 'attendance',
-        employee_id: currentUser.employee_id, name: currentUser.name, position: currentUser.position,
-        attendance_date: getLocalISOString(),
-        clock_in_time: currentTimeStr,
-        attendance_status: status, // Pakai hasil deteksi baru
-        location_in: document.getElementById('location-in').value,
-        selfie_in_url: document.getElementById('selfie-in-data').value,
-        notes_in: document.getElementById('notes-in').value,
-        job_desk_in: currentJobDeskInCompleted.length + ' tugas selesai',
-        cash_in_hand_start: cashStart // Kirim data uang
-      };
-      
-      await postData('create', { payload });
-      hideClockInModal();
-      await initApp(); updateEmployeeDashboard();
-      showToast("Berhasil Clock In (Shift " + detectedShift + ")");
-    }
-
-    async function clockOut(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btn-submit-clock-out');
-      
-      // Validasi Input Lembur
-      const isOvertime = document.getElementById('check-overtime').checked;
-      const otDuration = document.getElementById('overtime-duration').value;
-      const otReason = document.getElementById('overtime-reason').value;
-
-      if(isOvertime) {
-          if(!otDuration || !otReason) {
-              alert("Mohon isi Durasi dan Alasan Lembur!");
-              return;
-          }
-      }
-
-      // Validasi Uang Kasir (Akhir)
-      let cashEnd = '';
-      if (currentUser.position === 'Kasir') {
-          cashEnd = document.getElementById('cash-out-amount').value;
-          if (!cashEnd) {
-              alert("Wajib mengisi jumlah uang akhir di brangkas!");
-              return;
-          }
-      }
-
-      btn.disabled = true; btn.innerText = "Memproses...";
-
-      // FIX: Cari tanggal masuk yang asli (untuk shift malam)
-      const myPendingAttendance = allData.find(d => 
-          d.type === 'attendance' && 
-          d.employee_id === currentUser.employee_id && 
-          (!d.clock_out_time || d.clock_out_time === '')
-      );
-
-      const targetDate = myPendingAttendance ? myPendingAttendance.attendance_date : getLocalISOString();
-      
-      const payload = {
-        type: 'attendance',
-        employee_id: currentUser.employee_id,
-        attendance_date: targetDate, // Gunakan tanggal asli saat masuk
-        clock_out_time: getLocalTimeString(),
-        location_out: document.getElementById('location-out').value,
-        selfie_out_url: document.getElementById('selfie-out-data').value,
-        notes_out: document.getElementById('notes-out').value,
-        job_desk_out: currentJobDeskOutCompleted.length + ' tugas selesai',
-        // Data Lembur
-        is_overtime: isOvertime,
-        overtime_duration: isOvertime ? otDuration : '',
-        overtime_reason: isOvertime ? otReason : '',
-        // Data Uang Akhir
-        cash_in_hand_end: cashEnd 
-      };
-      
-      await postData('update', { payload });
-      hideClockOutModal();
-      await initApp(); updateEmployeeDashboard();
-      showToast("Berhasil Clock Out");
-    }
-
-    // CAMERA & GPS
-    async function initCamera(type) {
-        try {
-            if(mediaStream) mediaStream.getTracks().forEach(t=>t.stop());
-            mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-            document.getElementById('video-'+type).srcObject = mediaStream;
-            document.getElementById('video-'+type).classList.remove('hidden');
-            document.getElementById('photo-'+type).classList.add('hidden');
-        } catch(e){ showToast("Kamera Error","error"); }
-    }
-    function takeSnapshot(type) {
-        const v = document.getElementById('video-'+type);
-        const c = document.getElementById('canvas-'+type);
-        c.width = v.videoWidth; c.height = v.videoHeight;
-        c.getContext('2d').drawImage(v,0,0);
-        const data = c.toDataURL('image/jpeg');
-        document.getElementById('selfie-'+type+'-data').value = data;
-        document.getElementById('photo-'+type).src = data;
-        document.getElementById('photo-'+type).classList.remove('hidden');
-        v.classList.add('hidden');
-    }
-    function stopCamera() { if(mediaStream) mediaStream.getTracks().forEach(t=>t.stop()); }
-
-    function getLocation(type) {
-        const status = document.getElementById('gps-status-'+type);
-        const btn = document.getElementById('btn-submit-clock-'+type);
-        status.classList.remove('hidden'); status.innerText = "Mendeteksi...";
-        
-        navigator.geolocation.getCurrentPosition(pos => {
-            const dist = getDist(pos.coords.latitude, pos.coords.longitude, TARGET_LAT, TARGET_LON);
-            document.getElementById('location-'+type).value = `${pos.coords.latitude},${pos.coords.longitude} (${Math.round(dist)}m)`;
-            
-            if (dist <= MAX_RADIUS_METERS) {
-                status.innerText = "✅ Lokasi Valid"; status.className = "mb-2 p-2 bg-green-100 text-green-800 rounded text-center font-bold";
-                btn.disabled = false; btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                btn.classList.add(type==='in'?'bg-green-600':'bg-red-600');
-                btn.innerText = "SUBMIT";
-            } else {
-                status.innerText = `❌ Diluar Radius (${Math.round(dist)}m)`; status.className = "mb-2 p-2 bg-red-100 text-red-800 rounded text-center font-bold";
-                btn.disabled = true;
-            }
-        });
-    }
-    
-    function getDist(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; 
-        const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-        const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2) * Math.sin(Δλ/2)**2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     document.addEventListener('DOMContentLoaded', initApp);
