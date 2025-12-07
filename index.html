@@ -3,15 +3,15 @@
  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PayBoss Cafe - Sistem Absensi</title>
+  <title>PayBoss Cafe - Sistem Absensi (Shift Baru)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; height: 100%; }
     html { height: 100%; }
-    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .gradient-bg { background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); } /* Warna agak diubah biar segar */
     .gradient-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
     .card-shadow { box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: transform 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); transition: transform 0.2s; }
     .btn-primary:hover { transform: scale(1.05); }
     .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
     .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
@@ -28,16 +28,22 @@
     .page-container { min-height: 100%; display: flex; flex-direction: column; }
     .scrollable-content { flex: 1; overflow-y: auto; padding: 24px; }
     .tab-button { padding: 12px 24px; font-weight: bold; border-radius: 12px; transition: all 0.3s; cursor: pointer; }
-    .tab-button.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .tab-button.active { background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: white; }
     .tab-button:not(.active) { background: white; color: #6b7280; }
     .tab-button:not(.active):hover { background: #f3f4f6; }
     .roster-card { transition: all 0.3s; }
     .roster-card.today { border: 3px solid #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
     .shift-badge { padding: 8px 16px; border-radius: 12px; font-weight: bold; font-size: 14px; }
-    .shift-pagi { background: #FEF3C7; color: #92400E; }
-    .shift-siang { background: #FED7AA; color: #9A3412; }
-    .shift-malam { background: #DBEAFE; color: #1E3A8A; }
-    .shift-off { background: #F3F4F6; color: #6B7280; }
+    
+    /* WARNA SHIFT BARU */
+    /* Pagi (00-08): Biru Muda */
+    .shift-pagi { background: #E0F2FE; color: #0369A1; border: 1px solid #0EA5E9; }
+    /* Siang (08-16): Oranye/Kuning (Matahari) */
+    .shift-siang { background: #FFEDD5; color: #9A3412; border: 1px solid #F97316; }
+    /* Malam (16-24): Ungu/Gelap */
+    .shift-malam { background: #EDE9FE; color: #5B21B6; border: 1px solid #8B5CF6; }
+    .shift-off { background: #F3F4F6; color: #6B7280; border: 1px solid #D1D5DB; }
+
     .status-pending { background: #FEF3C7; color: #92400E; }
     .status-approved { background: #D1FAE5; color: #065F46; }
     .status-rejected { background: #FEE2E2; color: #991B1B; }
@@ -53,10 +59,6 @@
     .roster-table th:first-child, .roster-table td:first-child { position: sticky; left: 0; background: white; z-index: 10; border-right: 2px solid #e5e7eb; min-width: 120px; text-align: left; }
     .roster-cell { cursor: pointer; transition: all 0.2s; border-radius: 8px; padding: 8px 4px; font-size: 12px; font-weight: bold; }
     .roster-cell:hover { transform: scale(1.05); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .shift-pagi { background-color: #FEF3C7; color: #92400E; border: 1px solid #F59E0B; }
-    .shift-siang { background-color: #FFEDD5; color: #9A3412; border: 1px solid #EA580C; }
-    .shift-malam { background-color: #DBEAFE; color: #1E3A8A; border: 1px solid #2563EB; }
-    .shift-off { background-color: #F3F4F6; color: #6B7280; border: 1px solid #D1D5DB; }
   </style>
  </head>
  <body class="bg-gray-100">
@@ -74,7 +76,7 @@
 
   <!-- MANAGER DASHBOARD -->
   <div id="manager-dashboard" class="hidden page-container">
-   <header class="bg-white shadow-lg border-b-4 border-purple-600 p-6">
+   <header class="bg-white shadow-lg border-b-4 border-indigo-600 p-6">
     <div class="flex justify-between items-center max-w-7xl mx-auto">
      <div><h1 class="text-3xl font-bold text-gray-800">Dashboard Manager</h1><p class="text-gray-600">PayBoss Cafe</p></div>
      <button onclick="logout()" class="px-6 py-2 bg-red-600 text-white font-bold rounded-lg">Logout</button>
@@ -101,7 +103,7 @@
     <div id="manager-tab-employees" class="tab-content">
      <div class="bg-white rounded-2xl p-8 card-shadow mb-8">
       <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">👥 Karyawan</h2><button onclick="showEmployeeForm()" class="btn-primary text-white px-6 py-3 rounded-xl font-bold">➕ Tambah</button></div>
-      <div id="employee-form" class="hidden mb-8 p-8 bg-purple-50 rounded-2xl">
+      <div id="employee-form" class="hidden mb-8 p-8 bg-indigo-50 rounded-2xl">
        <form onsubmit="saveEmployee(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="text" id="emp-id" readonly class="w-full p-3 border rounded-xl bg-gray-100">
         <input type="text" id="emp-name" required class="w-full p-3 border rounded-xl" placeholder="Nama">
@@ -131,12 +133,12 @@
     <div id="manager-tab-attendance" class="tab-content hidden">
       
       <!-- LIVE SHIFT MONITOR -->
-      <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 card-shadow mb-8 text-white">
+      <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 card-shadow mb-8 text-white">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-bold flex items-center gap-2">📡 Live Shift Monitor <span class="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Hari Ini</span></h2>
             <div class="text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full" id="monitor-date-display">...</div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="shift-monitor-grid">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="shift-monitor-grid">
             <div class="bg-white bg-opacity-10 rounded-xl p-4 animate-pulse">Loading...</div>
         </div>
       </div>
@@ -169,6 +171,11 @@
                 <thead><tr class="bg-gray-100" id="roster-header-row"><th class="p-4">Karyawan</th></tr></thead>
                 <tbody id="roster-grid-body"></tbody>
             </table>
+        </div>
+        <div class="mt-4 flex gap-4 text-sm">
+            <span class="flex items-center gap-2"><div class="w-4 h-4 bg-[#E0F2FE] border border-[#0EA5E9]"></div> Pagi (00:00-08:00)</span>
+            <span class="flex items-center gap-2"><div class="w-4 h-4 bg-[#FFEDD5] border border-[#F97316]"></div> Siang (08:00-16:00)</span>
+            <span class="flex items-center gap-2"><div class="w-4 h-4 bg-[#EDE9FE] border border-[#8B5CF6]"></div> Malam (16:00-24:00)</span>
         </div>
       </div>
     </div>
@@ -301,7 +308,7 @@
         <input type="number" id="cash-out-amount" placeholder="Total uang fisik saat pulang (Rp)" class="w-full p-3 border-2 border-blue-300 rounded-xl text-lg font-bold">
      </div>
 
-     <!-- BAGIAN BARU: PENGAJUAN LEMBUR -->
+     <!-- PENGAJUAN LEMBUR -->
      <div class="bg-orange-50 p-4 rounded-xl border border-orange-200">
          <h3 class="font-bold mb-2 text-orange-800">🔥 Pengajuan Lembur</h3>
          <label class="flex items-center gap-2 mb-2 cursor-pointer">
@@ -379,12 +386,16 @@
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(number);
     }
 
-    // === SHIFT TIME RULES (FOR TOLERANCE CALCULATION) ===
-    // Format: HH:MM integer values. Tolerance is 15 mins.
+    // === ATURAN SHIFT BARU ===
+    // Shift 1 Pagi: 00:00 - 08:00
+    // Shift 2 Siang: 08:00 - 16:00
+    // Shift 3 Malam: 16:00 - 24:00 (00:00 next day)
+    
+    // Toleransi keterlambatan 15 menit
     const SHIFT_RULES = {
-        'Pagi': { start_h: 8, start_m: 0, end_h: 16, end_m: 0 },
-        'Siang': { start_h: 16, start_m: 0, end_h: 23, end_m: 0 },
-        'Malam': { start_h: 23, start_m: 0, end_h: 8, end_m: 0 } // Crosses day
+        'Pagi': { start_h: 0, start_m: 0, end_h: 8, end_m: 0 },
+        'Siang': { start_h: 8, start_m: 0, end_h: 16, end_m: 0 },
+        'Malam': { start_h: 16, start_m: 0, end_h: 23, end_m: 59 } 
     };
 
     function timeToMinutes(timeStr) {
@@ -396,8 +407,8 @@
     // ROSTER VARS
     let currentRosterWeekOffset = 0;
     const SHIFT_TYPES = ['Off', 'Pagi', 'Siang', 'Malam'];
-    const SHIFT_STYLES = { 'Off': 'bg-gray-200', 'Pagi': 'bg-yellow-200', 'Siang': 'bg-orange-200', 'Malam': 'bg-blue-200' };
-    const SHIFT_TIMES = { 'Pagi': '08:00-15:59', 'Siang': '16:00-22:59', 'Malam': '23:00-07:59', 'Off': '-' };
+    const SHIFT_STYLES = { 'Off': 'shift-off', 'Pagi': 'shift-pagi', 'Siang': 'shift-siang', 'Malam': 'shift-malam' };
+    const SHIFT_TIMES = { 'Pagi': '00:00-07:59', 'Siang': '08:00-15:59', 'Malam': '16:00-23:59', 'Off': '-' };
     
     // DEFINISI URUTAN JABATAN (Prioritas Tampilan)
     const POSITION_RANK = { 
@@ -410,7 +421,7 @@
         'Pramusaji': 5
     };
 
-    let allData = [], currentUser = null; // Chat vars removed
+    let allData = [], currentUser = null; 
     let currentJobDeskInCompleted = [], currentJobDeskOutCompleted = [];
     let mediaStream = null;
 
@@ -567,7 +578,7 @@
       const list = document.getElementById('employee-list');
       const emps = allData.filter(d=>d.type==='employee');
       list.innerHTML = emps.map(e => `
-        <div class="bg-purple-50 p-4 rounded-xl border mb-2 flex justify-between items-center">
+        <div class="bg-indigo-50 p-4 rounded-xl border mb-2 flex justify-between items-center">
           <div><h4 class="font-bold">${e.name}</h4><p class="text-sm text-gray-600">${e.position} | ${e.employee_id}</p></div>
           <button onclick="deleteItem('${e.employee_id}', 'employee')" class="text-red-600 font-bold text-sm">Hapus</button>
         </div>
@@ -588,16 +599,10 @@
         
         dateDisplay.innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
 
-        // 1. Get Scheduled Roster
         const rosterToday = allData.filter(d => d.type === 'roster' && d.roster_date === today);
-        
-        // 2. Get Actual Attendance
         const attendanceToday = allData.filter(d => d.type === 'attendance' && d.attendance_date === today);
-        
-        // 3. Get All Employees (to map positions)
         const employees = allData.filter(d => d.type === 'employee');
 
-        // 4. Grouping
         const groups = { 'Pagi': [], 'Siang': [], 'Malam': [], 'Extra': [] };
 
         // Process Scheduled
@@ -631,12 +636,12 @@
             }
         });
 
-        // 5. Render HTML
+        // Render HTML
         grid.innerHTML = '';
-        const shiftColors = { 'Pagi': 'bg-yellow-500', 'Siang': 'bg-orange-500', 'Malam': 'bg-blue-800', 'Extra': 'bg-purple-600' };
+        const shiftColors = { 'Pagi': 'bg-blue-500', 'Siang': 'bg-orange-500', 'Malam': 'bg-purple-800', 'Extra': 'bg-pink-600' };
 
         ['Pagi', 'Siang', 'Malam', 'Extra'].forEach(shift => {
-            if(shift === 'Extra' && groups[shift].length === 0) return; // Hide extra if empty
+            if(shift === 'Extra' && groups[shift].length === 0) return; 
 
             const items = groups[shift].map(p => `
                 <div class="flex justify-between items-center p-2 mb-1 rounded bg-white bg-opacity-10 border border-white border-opacity-20">
@@ -666,7 +671,7 @@
         });
     }
 
-    // REVISED: MANAGER ATTENDANCE WITH CORRECTION & OVERTIME BADGE & CASH REPORT
+    // REVISED: MANAGER ATTENDANCE
     function renderManagerAttendance() {
       const list = document.getElementById('manager-attendance-list');
       const filterDate = document.getElementById('manager-att-date').value || getLocalISOString();
@@ -675,10 +680,9 @@
       
       if(atts.length===0) list.innerHTML = '<p class="text-center text-gray-400 py-4">Tidak ada data absensi pada tanggal ini.</p>';
       else list.innerHTML = atts.map(a => {
-        // Determine status style
         const isLate = a.attendance_status && a.attendance_status.toLowerCase().includes('telat');
         const isEarly = a.attendance_status && a.attendance_status.toLowerCase().includes('cepat');
-        const statusColor = (isLate || isEarly) ? 'bg-red-100 text-red-800' : 'bg-purple-100 text-purple-800';
+        const statusColor = (isLate || isEarly) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
 
         return `
         <div class="bg-white p-4 rounded-xl border mb-3 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
@@ -693,7 +697,6 @@
                 <div>📤 Out: <span class="font-bold">${a.clock_out_time || '-'}</span></div>
              </div>
              
-             <!-- CASH REPORT FOR MANAGER -->
              ${(a.cash_in_hand_start || a.cash_in_hand_end) ? `
                 <div class="mt-2 p-2 bg-gray-50 rounded border border-gray-200 text-xs">
                     <div class="font-bold text-gray-700 mb-1">💰 Laporan Kasir</div>
@@ -747,14 +750,12 @@
 
         if(!start || !end) return alert("Pilih tanggal awal dan akhir!");
 
-        // 1. Filter Data
         const atts = allData.filter(d => 
             d.type === 'attendance' && 
             d.attendance_date >= start && 
             d.attendance_date <= end
         );
 
-        // 2. Aggregate per Employee
         const report = {};
         
         atts.forEach(a => {
@@ -768,27 +769,23 @@
                 };
             }
             
-            // Count Attendance
             report[a.employee_id].count++;
             
-            // Sum Work Duration (If Clock Out exists)
             if(a.clock_in_time && a.clock_out_time) {
                 const inMins = timeToMinutes(a.clock_in_time);
                 let outMins = timeToMinutes(a.clock_out_time);
                 
-                // Handle Night Shift Crossing Midnight (e.g., In 23:00, Out 06:00)
+                // Logic untuk shift malam jika pulang besok harinya
                 if(outMins < inMins) outMins += (24 * 60);
                 
                 report[a.employee_id].workMinutes += (outMins - inMins);
             }
 
-            // Sum Overtime
             if(a.is_overtime && a.overtime_duration) {
                 report[a.employee_id].overtimeHours += parseFloat(a.overtime_duration);
             }
         });
 
-        // 3. Render Table
         if(Object.keys(report).length === 0) {
             body.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-400">Tidak ada data pada periode ini.</td></tr>';
             return;
@@ -808,7 +805,7 @@
         }).join('');
     }
 
-    // CLOCK IN/OUT (FIXED LOGIC FOR NIGHT SHIFT + CASH INPUT FOR KASIR + STATUS TOLERANCE)
+    // CLOCK IN/OUT LOGIC
     
     function showClockInModal() { 
         document.getElementById('clock-in-modal').classList.remove('hidden'); 
@@ -817,11 +814,10 @@
         document.getElementById('job-desk-start').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobIn(${i},this.checked)"> ${t}</label>`).join('');
         currentJobDeskInCompleted = [];
 
-        // Show Cash Input if Kasir
         const cashInput = document.getElementById('cash-in-input-group');
         if (currentUser.position === 'Kasir') {
             cashInput.classList.remove('hidden');
-            document.getElementById('cash-in-amount').value = ''; // Reset value
+            document.getElementById('cash-in-amount').value = '';
         } else {
             cashInput.classList.add('hidden');
         }
@@ -830,7 +826,6 @@
     function showClockOutModal() { 
         document.getElementById('clock-out-modal').classList.remove('hidden'); 
         initCamera('out'); 
-        // Reset Overtime Form
         document.getElementById('check-overtime').checked = false;
         document.getElementById('overtime-inputs').classList.add('hidden');
         document.getElementById('overtime-duration').value = '';
@@ -840,11 +835,10 @@
         document.getElementById('job-desk-end').innerHTML = list.map((t, i) => `<label class="flex gap-2 p-2 border rounded"><input type="checkbox" onchange="updateJobOut(${i},this.checked)"> ${t}</label>`).join('');
         currentJobDeskOutCompleted = [];
 
-        // Show Cash Input if Kasir
         const cashInput = document.getElementById('cash-out-input-group');
         if (currentUser.position === 'Kasir') {
             cashInput.classList.remove('hidden');
-            document.getElementById('cash-out-amount').value = ''; // Reset value
+            document.getElementById('cash-out-amount').value = '';
         } else {
             cashInput.classList.add('hidden');
         }
@@ -865,36 +859,22 @@
     function updateJobIn(i, c) { c ? currentJobDeskInCompleted.push(i) : currentJobDeskInCompleted.splice(currentJobDeskInCompleted.indexOf(i), 1); }
     function updateJobOut(i, c) { c ? currentJobDeskOutCompleted.push(i) : currentJobDeskOutCompleted.splice(currentJobDeskOutCompleted.indexOf(i), 1); }
 
-    // === NEW LOGIC: FLEXIBLE SHIFT DETECTION ===
+    // === LOGIKA DETEKSI SHIFT OTOMATIS ===
     function detectShift(hour) {
-        if (hour >= 6 && hour < 14) return 'Pagi';
-        if (hour >= 14 && hour < 22) return 'Siang';
-        return 'Malam'; // 22:00 - 06:00
+        if (hour >= 0 && hour < 8) return 'Pagi';    // 00:00 - 07:59
+        if (hour >= 8 && hour < 16) return 'Siang';  // 08:00 - 15:59
+        return 'Malam';                              // 16:00 - 23:59
     }
 
     function calculateLateStatus(shift, clockInTimeStr) {
         if (!clockInTimeStr) return "Tidak Diketahui";
         const rule = SHIFT_RULES[shift];
-        if (!rule) return "Tepat Waktu"; // Fallback
+        if (!rule) return "Tepat Waktu";
 
         const [hIn, mIn] = clockInTimeStr.split(':').map(Number);
         let inMins = hIn * 60 + mIn;
-        
         let targetMins = rule.start_h * 60 + rule.start_m;
-        // Tolerance is 15 mins
-        let toleranceLimit = targetMins + 15;
-
-        // Special Case: Shift Malam (Start 23:00)
-        // If employee enters at 00:10, logic needs adjustment.
-        // Assume shift Malam starts previous day if clocking in late night or very early morning.
-        if (shift === 'Malam') {
-             // If In time is early morning (e.g., 00:05), treat as next day > add 24h to target? No, treat input as linear time.
-             // Simpler: Convert "Late Night" times to > 24h scale if needed, OR just compare normally.
-             // Start 23:00. Late limit 23:15.
-             // If In is 00:30 (next day), that's DEFINITELY late.
-             // Logic: If hour < 12 (early morning), add 24h to time for comparison.
-             if (hIn < 12) inMins += 24 * 60; 
-        }
+        let toleranceLimit = targetMins + 15; // 15 menit toleransi
 
         if (inMins > toleranceLimit) {
             const lateMins = inMins - targetMins;
@@ -913,29 +893,17 @@
         
         let targetEndMins = rule.end_h * 60 + rule.end_m;
         
-        // Shift Malam ends at 08:00 (next day). 
-        // Logic: If Shift is Malam, target is 8:00 (which is just 480 mins).
-        // But employee started previous day. 
-        // Just use standard linear day time for comparison if we assume they clock out in the morning.
-        // If they clock out at 23:00 previous day? That's super early leave.
-        // Assume Out time is on the correct "day side".
-        // If Shift is Malam (Ends 8:00) and Out is > 12:00 (e.g. 23:30), treat as Previous Day -> Subtract 24h? No.
-        // Easiest: If shift is Malam and Out > 15:00, treat as 'previous day' relative to 8:00? 
-        // Standard: Shift Malam ends 08:00. Early leave if < 07:45.
-        // If someone leaves at 07:00 -> Early.
-        
-        // Tolerance: 15 mins BEFORE end.
-        let toleranceLimit = targetEndMins - 15; 
-        
-        // Special handling for Malam crossing midnight logic if output is e.g. 06:00
-        if (shift === 'Malam') {
-             // Target 8:00. Limit 7:45.
-             // If out is 07:00 -> 420 < 465 -> Early. Correct.
-        } else if (shift === 'Siang') {
-             // Target 23:00. Limit 22:45.
-             // If out is 00:30 (next day), treat as > 24h.
-             if (hOut < 12) outMins += 24 * 60;
+        // Logika Khusus Malam (Ends 24:00/00:00)
+        // Jika shift malam, target 23:59 atau 24:00.
+        // Jika user clock out jam 00:05 (besoknya), kita anggap itu > target, jadi aman.
+        // Kita konversi jam 00:xx menjadi 24:xx untuk perbandingan.
+        if (shift === 'Malam' && hOut < 12) {
+             outMins += 24 * 60; // Tambah 24 jam (1440 menit)
+             // Jika target end adalah 23:59, ini akan aman.
+             // Jika target end kita set 23:59 di rules, maka 00:05 jadi 24:05 > 23:59. Aman.
         }
+
+        let toleranceLimit = targetEndMins - 15; 
 
         if (outMins < toleranceLimit) {
             return `${existingStatus} & Pulang Cepat`;
@@ -947,7 +915,6 @@
       e.preventDefault();
       const btn = document.getElementById('btn-submit-clock-in');
       
-      // Validasi Uang Kasir
       let cashStart = '';
       if (currentUser.position === 'Kasir') {
           cashStart = document.getElementById('cash-in-amount').value;
@@ -962,10 +929,7 @@
       const currentTimeStr = getLocalTimeString();
       const currentHour = parseInt(currentTimeStr.split(':')[0]);
       
-      // AUTO DETECT SHIFT & STATUS
       const detectedShift = detectShift(currentHour);
-      
-      // NEW: Calculate precise Late Status
       const status = calculateLateStatus(detectedShift, currentTimeStr);
 
       const payload = {
@@ -974,7 +938,7 @@
         attendance_date: getLocalISOString(),
         clock_in_time: currentTimeStr,
         attendance_status: status, 
-        shift_type: detectedShift, // Store detected shift for Clock Out reference
+        shift_type: detectedShift,
         location_in: document.getElementById('location-in').value,
         selfie_in_url: document.getElementById('selfie-in-data').value,
         notes_in: document.getElementById('notes-in').value,
@@ -992,7 +956,6 @@
       e.preventDefault();
       const btn = document.getElementById('btn-submit-clock-out');
       
-      // Validasi Input Lembur & Cash
       const isOvertime = document.getElementById('check-overtime').checked;
       const otDuration = document.getElementById('overtime-duration').value;
       const otReason = document.getElementById('overtime-reason').value;
@@ -1015,7 +978,6 @@
 
       btn.disabled = true; btn.innerText = "Memproses...";
 
-      // FIX: Cari tanggal masuk yang asli
       const myPendingAttendance = allData.find(d => 
           d.type === 'attendance' && 
           d.employee_id === currentUser.employee_id && 
@@ -1023,13 +985,10 @@
       );
 
       const targetDate = myPendingAttendance ? myPendingAttendance.attendance_date : getLocalISOString();
-      
-      // NEW: Retrieve shift info to calculate Early Leave
       const shift = myPendingAttendance ? (myPendingAttendance.shift_type || 'Pagi') : 'Pagi';
       const currentStatus = myPendingAttendance ? myPendingAttendance.attendance_status : 'Tepat Waktu';
       const outTime = getLocalTimeString();
       
-      // Calculate Final Status (Append Early Leave if needed)
       const finalStatus = calculateEarlyLeaveStatus(shift, outTime, currentStatus);
 
       const payload = {
@@ -1037,7 +996,7 @@
         employee_id: currentUser.employee_id,
         attendance_date: targetDate, 
         clock_out_time: outTime,
-        attendance_status: finalStatus, // Update status with early leave info
+        attendance_status: finalStatus,
         location_out: document.getElementById('location-out').value,
         selfie_out_url: document.getElementById('selfie-out-data').value,
         notes_out: document.getElementById('notes-out').value,
@@ -1106,48 +1065,36 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // UPDATED: LOGIC DASHBOARD KARYAWAN UNTUK SHIFT LINTAS HARI
     function updateEmployeeDashboard() {
       const myAtt = allData.filter(d => d.type === 'attendance' && d.employee_id === currentUser.employee_id);
       
-      // 1. Cari Sesi Aktif (Gantung) - Prioritas Utama
-      // Cari data yang clock_out-nya masih kosong (undefined atau string kosong)
       const openSession = myAtt.find(d => !d.clock_out_time || d.clock_out_time === '');
       
       const inCard = document.getElementById('clock-in-card');
       const outCard = document.getElementById('clock-out-card');
       const alertBox = document.getElementById('active-session-alert');
       
-      // Reset classes
       inCard.classList.remove('opacity-50','pointer-events-none');
       outCard.classList.remove('opacity-50','pointer-events-none');
       alertBox.classList.add('hidden');
 
       if (openSession) {
-         // Ada sesi gantung (baik hari ini atau kemarin) -> WAJIB CLOCK OUT DULU
-         inCard.classList.add('opacity-50','pointer-events-none'); // Matikan Clock In
-         outCard.classList.remove('opacity-50','pointer-events-none'); // Nyalakan Clock Out
-         
-         // Tampilkan Alert Warning
+         inCard.classList.add('opacity-50','pointer-events-none'); 
+         outCard.classList.remove('opacity-50','pointer-events-none'); 
          alertBox.classList.remove('hidden');
       } else {
-         // Tidak ada sesi gantung (Semua sudah closed atau belum absen)
-         // Logika lama: Satu hari satu absen.
          const today = getLocalISOString();
          const todayAtt = myAtt.find(a => a.attendance_date === today);
          
          if (todayAtt) {
-             // Sudah absen hari ini dan sudah pulang -> Matikan semua (Selesai tugas hari ini)
              inCard.classList.add('opacity-50','pointer-events-none');
              outCard.classList.add('opacity-50','pointer-events-none');
          } else {
-             // Belum absen hari ini -> Nyalakan Clock In
              inCard.classList.remove('opacity-50','pointer-events-none');
              outCard.classList.add('opacity-50','pointer-events-none');
          }
       }
       
-      // Render List (Urutkan dari yang terbaru: kombinasi tanggal + jam)
       myAtt.sort((a, b) => {
           const timeA = a.attendance_date + 'T' + (a.clock_in_time || '00:00');
           const timeB = b.attendance_date + 'T' + (b.clock_in_time || '00:00');
@@ -1168,7 +1115,6 @@
       }).join('');
     }
 
-    // EMPLOYEE LOGIC
     function showEmployeeTab(tab) {
       ['attendance','roster','leave'].forEach(t => {
         document.getElementById('employee-tab-'+t).classList.add('hidden');
@@ -1183,7 +1129,7 @@
     function renderEmployeeRoster() {
       const rosters = allData.filter(d => d.type === 'roster' && d.employee_id === currentUser.employee_id);
       document.getElementById('employee-roster-list').innerHTML = rosters.map(r => `
-        <div class="bg-purple-50 p-4 rounded-xl text-center border border-purple-100"><div class="font-bold text-lg">${r.roster_date}</div><div class="text-purple-600 font-bold">${r.shift_type}</div></div>
+        <div class="bg-indigo-50 p-4 rounded-xl text-center border border-indigo-100"><div class="font-bold text-lg">${r.roster_date}</div><div class="text-indigo-600 font-bold">${r.shift_type}</div></div>
       `).join('');
     }
 
@@ -1212,7 +1158,6 @@
       `).join('');
     }
 
-    // NEW: CORRECTION LOGIC
     function openCorrectionModal(empId, date) {
         const record = allData.find(d => d.type === 'attendance' && d.employee_id === empId && d.attendance_date === date);
         if(!record) return showToast("Data tidak ditemukan", "error");
@@ -1239,7 +1184,6 @@
             clock_in_time: document.getElementById('correct-in-time').value,
             clock_out_time: document.getElementById('correct-out-time').value,
             attendance_status: document.getElementById('correct-status').value,
-            // Keep existing fields safe if not edited
             notes_in: "Dikoreksi Manager",
         };
 
@@ -1252,25 +1196,18 @@
         renderManagerAttendance();
     }
 
-    // ROSTER GRID
     function changeRosterWeek(offset) { currentRosterWeekOffset += offset; renderRosterGrid(); }
 
     function renderRosterGrid() {
       const headerRow = document.getElementById('roster-header-row');
       const body = document.getElementById('roster-grid-body');
       
-      // 1. Ambil Data & SORTIR Berdasarkan Jabatan
       let emps = allData.filter(d => d.type === 'employee');
       
       emps.sort((a, b) => {
-          // Ambil ranking, jika tidak ada set ke 99 (paling bawah)
           const rankA = POSITION_RANK[a.position] || 99;
           const rankB = POSITION_RANK[b.position] || 99;
-          
-          // Sort Utama: Berdasarkan Ranking Jabatan
           if (rankA !== rankB) return rankA - rankB;
-          
-          // Sort Kedua: Berdasarkan Nama (Abjad) jika jabatan sama
           return a.name.localeCompare(b.name);
       });
 
@@ -1295,7 +1232,6 @@
       }
 
       body.innerHTML = emps.map(e => {
-        // Tampilkan Nama DAN Jabatan agar grouping terlihat jelas
         let cells = `
             <td class="p-2 border-r bg-gray-50">
                 <div class="font-bold text-xs text-gray-800">${e.name}</div>
